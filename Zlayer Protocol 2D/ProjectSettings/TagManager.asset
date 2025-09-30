@@ -8,6 +8,7 @@ TagManager:
   - Door
   - Room
   - PowerUp
+  - PLayer
   layers:
   - Default
   - TransparentFX
