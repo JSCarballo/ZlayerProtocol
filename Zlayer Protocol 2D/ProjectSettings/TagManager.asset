@@ -46,8 +46,11 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: Floor
+  - name: Background
     uniqueID: 1999478555
+    locked: 0
+  - name: Walls
+    uniqueID: 3048354211
     locked: 0
   - name: Props
     uniqueID: 2863863761
@@ -55,11 +58,14 @@ TagManager:
   - name: Bodies
     uniqueID: 691333719
     locked: 0
-  - name: Projectiles
-    uniqueID: 1767714473
-    locked: 0
   - name: UI
     uniqueID: 3832241159
+    locked: 0
+  - name: Character
+    uniqueID: 2812208403
+    locked: 0
+  - name: Projectiles
+    uniqueID: 1767714473
     locked: 0
   m_RenderingLayers:
   - Default

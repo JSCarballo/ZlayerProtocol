@@ -4,10 +4,10 @@ using System;
 public class Health : MonoBehaviour
 {
     public float maxHP = 6f;
-    public float currentHP;
+    public float currentHP; // opcional, o déjalo público
     public bool destroyOnDeath = true;
 
-    public event Action<float, float> OnHealthChanged; // current/max
+    public event Action<float, float> OnHealthChanged; // current,max
     public event Action OnDeath;
 
     void Awake() => currentHP = maxHP;
