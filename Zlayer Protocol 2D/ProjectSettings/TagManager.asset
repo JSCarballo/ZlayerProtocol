@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 3
+  tags:
+  - Enemy
+  - Door
+  - Room
+  - PowerUp
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - PLayer
+  - Enemy
+  - Projectile
+  - Walls
+  - Pickup
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: Floor
+    uniqueID: 1999478555
+    locked: 0
+  - name: Props
+    uniqueID: 2863863761
+    locked: 0
+  - name: Bodies
+    uniqueID: 691333719
+    locked: 0
+  - name: Projectiles
+    uniqueID: 1767714473
+    locked: 0
+  - name: UI
+    uniqueID: 3832241159
+    locked: 0
+  m_RenderingLayers:
+  - Default
