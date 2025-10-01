@@ -24,7 +24,7 @@ public class RoomRuntime : MonoBehaviour
     public void MarkAsStartRoom()
     {
         isStartRoom = true;
-        visited = true;            // no spawnear aquí
+        visited = true;            // no spawnear aquï¿½
         builder.SetAllDoors(true); // siempre abierta
 
         // Limpieza por si acaso
@@ -43,8 +43,8 @@ public class RoomRuntime : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
 
-        // SIEMPRE encuadrar cámara a esta sala al entrar
-        CameraRoomLock.Instance?.SnapToRoom(builder.RoomBounds);
+        // SIEMPRE encuadrar cï¿½mara a esta sala al entrar
+        CameraRoomLock.Instance?.GoToRoom(builder.RoomBounds, 0.6f);
 
         if (isStartRoom || visited) return;
 
