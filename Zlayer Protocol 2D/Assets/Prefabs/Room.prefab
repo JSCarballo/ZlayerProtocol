@@ -519,7 +519,7 @@ MonoBehaviour:
   wallsMap: {fileID: 6078149586695221486}
   floorTile: {fileID: 11400000, guid: 45cfaef990dd5b7458926914ddd748f9, type: 2}
   wallTile: {fileID: 11400000, guid: 4c31b85bab1257a4b9fee46a40a379a6, type: 2}
-  roomSizeTiles: {x: 20, y: 12}
+  roomSizeTiles: {x: 16, y: 9}
   doorPrefab: {fileID: 0}
   north: 1
   south: 1

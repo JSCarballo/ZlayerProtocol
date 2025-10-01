@@ -153,7 +153,7 @@ MonoBehaviour:
   roomPrefab: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
   enemyPrefab: {fileID: 8731047138970188411, guid: bf603d9055f15e14caeb05435d255f75, type: 3}
   playerPrefab: {fileID: 9212037553653903690, guid: 890b736f971781c44895ab3171a80c0f, type: 3}
-  roomWorldSpacing: {x: 20, y: 12}
+  roomWorldSpacing: {x: 16, y: 9}
 --- !u!4 &194648916
 Transform:
   m_ObjectHideFlags: 0
@@ -278,13 +278,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_AssetsPPU: 16
-  m_RefResolutionX: 320
-  m_RefResolutionY: 180
-  m_UpscaleRT: 1
-  m_PixelSnapping: 0
-  m_CropFrameX: 0
-  m_CropFrameY: 0
-  m_StretchFill: 0
+  m_RefResolutionX: 255
+  m_RefResolutionY: 144
+  m_UpscaleRT: 0
+  m_PixelSnapping: 1
+  m_CropFrameX: 1
+  m_CropFrameY: 1
+  m_StretchFill: 1
 --- !u!1 &533715027
 GameObject:
   m_ObjectHideFlags: 0
@@ -1194,6 +1194,41 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cam: {fileID: 519420031}
   margin: 0.5
+  defaultDuration: 0.6
+  easing:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.17699975
+      value: 0.63281584
+      inSlope: 1.4519389
+      outSlope: 1.4519389
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  useUnscaledTime: 1
 --- !u!4 &858977334
 Transform:
   m_ObjectHideFlags: 0
