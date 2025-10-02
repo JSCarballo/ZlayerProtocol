@@ -135,10 +135,11 @@ GameObject:
   - component: {fileID: 2777347454007302235}
   - component: {fileID: 2287729406339978330}
   - component: {fileID: 5845437246508241484}
-  - component: {fileID: 7531433930419105999}
   - component: {fileID: 1086106997084698451}
   - component: {fileID: 8481124397783283141}
   - component: {fileID: 7730909980260266431}
+  - component: {fileID: 2627890925218881014}
+  - component: {fileID: 7839456726129466727}
   m_Layer: 6
   m_Name: Player
   m_TagString: PLayer
@@ -247,42 +248,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!58 &7531433930419105999
-CircleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9212037553653903690}
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ForceSendLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ForceReceiveLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_ContactCaptureLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_CallbackLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_CompositeOperation: 0
-  m_CompositeOrder: 0
-  m_Offset: {x: 0, y: -0.35}
-  m_Radius: 0.15
 --- !u!114 &1086106997084698451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -331,3 +296,67 @@ MonoBehaviour:
   maxHP: 6
   currentHP: 6
   destroyOnDeath: 1
+--- !u!114 &2627890925218881014
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 761a0f81431111942b1ea8833c8064a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  toDisableExplicit:
+  - {fileID: 1086106997084698451}
+  - {fileID: 8481124397783283141}
+  nameKeywords:
+  - move
+  - movement
+  - controller
+  - input
+  - shoot
+  - fire
+  - weapon
+  - aim
+  - dash
+  includeChildren: 1
+  zeroVelocityOnLock: 1
+--- !u!70 &7839456726129466727
+CapsuleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: -0.08}
+  m_Size: {x: 0.6, y: 0.85}
+  m_Direction: 0

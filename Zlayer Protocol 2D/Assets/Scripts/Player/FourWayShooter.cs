@@ -1,49 +1,85 @@
+// Assets/Scripts/Player/FourWayShooter.cs
 using UnityEngine;
 
-/// Dispara con ? ? ? ? desde 4 "muzzles" diferentes (Up/Down/Left/Right).
 public class FourWayShooter : MonoBehaviour
 {
-    [Header("References")]
+    [Header("Base")]
     public GameObject bulletPrefab;
-    public Transform muzzleUp;
-    public Transform muzzleDown;
-    public Transform muzzleLeft;
-    public Transform muzzleRight;
+    public float baseDamage = 1f;
+    public float baseCooldown = 0.25f;     // seg entre disparos (1/4 = 4/s)
+    public float baseBulletSpeed = 8f;
 
-    [Header("Shooting")]
-    [SerializeField] private float bulletsPerSecond = 6f;
-    [SerializeField] private float bulletSpeed = 10f;
-    [SerializeField] private float bulletLife = 2f;
+    [Header("Inputs")]
+    public KeyCode upKey = KeyCode.UpArrow;
+    public KeyCode downKey = KeyCode.DownArrow;
+    public KeyCode leftKey = KeyCode.LeftArrow;
+    public KeyCode rightKey = KeyCode.RightArrow;
 
-    private float shootCooldown;
+    PlayerWeaponStats stats;
+    float cooldownTimer;
+
+    void Awake()
+    {
+        stats = GetComponent<PlayerWeaponStats>();
+        if (!stats) stats = gameObject.AddComponent<PlayerWeaponStats>(); // garantiza que exista
+    }
 
     void Update()
     {
-        shootCooldown -= Time.deltaTime;
+        cooldownTimer -= Time.deltaTime;
+        Vector2 dir = Vector2.zero;
 
-        // Detecta cu�l flecha est� presionada (prioridad por �ltima presionada)
-        if (Input.GetKey(KeyCode.UpArrow)) TryShoot(Vector2.up, muzzleUp);
-        else if (Input.GetKey(KeyCode.DownArrow)) TryShoot(Vector2.down, muzzleDown);
-        else if (Input.GetKey(KeyCode.LeftArrow)) TryShoot(Vector2.left, muzzleLeft);
-        else if (Input.GetKey(KeyCode.RightArrow)) TryShoot(Vector2.right, muzzleRight);
+        if (Input.GetKey(upKey)) dir = Vector2.up;
+        if (Input.GetKey(downKey)) dir = Vector2.down;
+        if (Input.GetKey(leftKey)) dir = Vector2.left;
+        if (Input.GetKey(rightKey)) dir = Vector2.right;
+
+        if (dir != Vector2.zero && cooldownTimer <= 0f)
+        {
+            Shoot(dir.normalized);
+            float cd = baseCooldown / Mathf.Max(0.01f, stats.fireRateMult);
+            cooldownTimer = cd;
+        }
     }
 
-    void TryShoot(Vector2 dir, Transform muzzle)
+    void Shoot(Vector2 dir)
     {
-        if (shootCooldown > 0f) return;
-        shootCooldown = 1f / bulletsPerSecond;
+        int total = 1 + Mathf.Max(0, stats.extraProjectiles);
+        float spread = stats.spreadDegrees;
 
-        if (bulletPrefab == null || muzzle == null) return;
-
-        var go = Instantiate(bulletPrefab, muzzle.position, Quaternion.identity);
-        var rb = go.GetComponent<Rigidbody2D>();
-        if (rb != null)
-            rb.linearVelocity = dir.normalized * bulletSpeed;
-
-        var proj = go.GetComponent<SimpleProjectile>();
-        if (proj != null)
+        if (spread <= 0f || total == 1)
         {
-            proj.lifeTime = bulletLife;
+            SpawnBullet(dir, 0f);
+        }
+        else
+        {
+            // centrado en dir, abanico
+            float step = total > 1 ? spread / (total - 1) : 0f;
+            float start = -spread * 0.5f;
+            for (int i = 0; i < total; i++)
+            {
+                float ang = start + i * step;
+                SpawnBullet(dir, ang);
+            }
+        }
+    }
+
+    void SpawnBullet(Vector2 dir, float deltaAngleDeg)
+    {
+        float dmg = baseDamage * stats.damageMult;
+        float spd = baseBulletSpeed * stats.projectileSpeedMult;
+
+        Vector2 d = Quaternion.Euler(0, 0, deltaAngleDeg) * dir;
+        var go = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+        var rb = go.GetComponent<Rigidbody2D>();
+        if (rb) rb.linearVelocity = d * spd;
+
+        var b = go.GetComponent<Projectile>();
+        if (b)
+        {
+            b.damage = dmg;
+            b.piercing = stats.piercing;
+            b.bouncing = stats.bouncing;
         }
     }
 }

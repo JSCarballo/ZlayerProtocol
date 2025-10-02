@@ -6,75 +6,100 @@ public class CameraRoomLock : MonoBehaviour
 {
     public static CameraRoomLock Instance { get; private set; }
 
-    [Header("Refs")]
+    [Header("References")]
     public Camera cam;
 
     [Header("Framing")]
+    [Tooltip("Borde extra alrededor de la sala")]
     public float margin = 0.5f;
 
-    [Header("Transition")]
-    public float defaultDuration = 0.6f; // tiempo por defecto del blend
-    public AnimationCurve easing = AnimationCurve.EaseInOut(0, 0, 1, 1);
-    public bool useUnscaledTime = true;  // ignora Time.timeScale en la transición
+    [Header("Defaults")]
+    [Tooltip("Curva por defecto de la transición (0..1)")]
+    public AnimationCurve defaultCurve = null;
 
-    private Coroutine _transition;
+    Coroutine currentTransition;
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
         if (!cam) cam = Camera.main;
+        if (defaultCurve == null) defaultCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     }
 
-    // Salto instantáneo (tu método actual)
     public void SnapToRoom(Bounds roomBounds)
     {
-        var target = ComputeTarget(roomBounds);
-        cam.transform.position = target.pos;
-        cam.orthographicSize = target.size;
+        if (currentTransition != null)
+        {
+            StopCoroutine(currentTransition);
+            currentTransition = null;
+        }
+        ApplyFrame(roomBounds);
     }
 
-    // Transición con duración por defecto
-    public void GoToRoom(Bounds roomBounds) => GoToRoom(roomBounds, defaultDuration);
-
-    // Transición con duración custom
-    public void GoToRoom(Bounds roomBounds, float duration)
+    public Coroutine TransitionToRoom(Bounds roomBounds, float duration, AnimationCurve curve = null, bool resize = true)
     {
-        if (duration <= 0f) { SnapToRoom(roomBounds); return; }
-        if (_transition != null) StopCoroutine(_transition);
-        _transition = StartCoroutine(DoTransition(roomBounds, duration));
+        if (currentTransition != null) StopCoroutine(currentTransition);
+        currentTransition = StartCoroutine(PanToRoomRoutine(roomBounds, duration, curve ?? defaultCurve, resize));
+        return currentTransition;
     }
 
-    private IEnumerator DoTransition(Bounds roomBounds, float duration)
+    public IEnumerator PanToRoom(Bounds roomBounds, float duration, AnimationCurve curve = null, bool resize = true)
     {
-        var target = ComputeTarget(roomBounds);
+        yield return PanToRoomRoutine(roomBounds, duration, curve ?? defaultCurve, resize);
+    }
+
+    IEnumerator PanToRoomRoutine(Bounds roomBounds, float duration, AnimationCurve curve, bool resize)
+    {
+        if (duration <= 0f)
+        {
+            ApplyFrame(roomBounds);
+            yield break;
+        }
 
         Vector3 startPos = cam.transform.position;
         float startSize = cam.orthographicSize;
 
+        // Objetivo
+        Vector3 targetPos = roomBounds.center; targetPos.z = startPos.z;
+        float targetSize = ComputeOrthoSize(roomBounds);
+
         float t = 0f;
-        while (t < 1f)
+        while (t < duration)
         {
-            t += (useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime) / duration;
-            float k = easing.Evaluate(Mathf.Clamp01(t));
-            cam.transform.position = Vector3.Lerp(startPos, target.pos, k);
-            cam.orthographicSize = Mathf.Lerp(startSize, target.size, k);
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / duration);
+            float e = curve != null ? curve.Evaluate(k) : k;
+
+            cam.transform.position = Vector3.Lerp(startPos, targetPos, e);
+            if (resize) cam.orthographicSize = Mathf.Lerp(startSize, targetSize, e);
+
             yield return null;
         }
 
-        cam.transform.position = target.pos;
-        cam.orthographicSize = target.size;
-        _transition = null;
+        cam.transform.position = targetPos;
+        if (resize) cam.orthographicSize = targetSize;
+
+        currentTransition = null;
     }
 
-    private (Vector3 pos, float size) ComputeTarget(Bounds b)
+    void ApplyFrame(Bounds b)
     {
-        Vector3 c = b.center; c.z = cam.transform.position.z;
+        Vector3 c = b.center;
+        c.z = cam.transform.position.z;
+        cam.transform.position = c;
+        cam.orthographicSize = ComputeOrthoSize(b);
+    }
 
+    float ComputeOrthoSize(Bounds b)
+    {
         float halfH = b.extents.y + margin;
         float halfW = b.extents.x + margin;
-        float size = Mathf.Max(halfH, halfW / cam.aspect);
-
-        return (c, size);
+        float byW = halfW / cam.aspect;
+        return Mathf.Max(halfH, byW);
     }
 }

@@ -90,7 +90,7 @@ GameObject:
   - component: {fileID: 6089514010441892585}
   m_Layer: 9
   m_Name: Tilemap_Walls
-  m_TagString: Untagged
+  m_TagString: Walls
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -520,7 +520,6 @@ MonoBehaviour:
   floorTile: {fileID: 11400000, guid: 45cfaef990dd5b7458926914ddd748f9, type: 2}
   wallTile: {fileID: 11400000, guid: 4c31b85bab1257a4b9fee46a40a379a6, type: 2}
   roomSizeTiles: {x: 16, y: 9}
-  doorPrefab: {fileID: 0}
   north: 1
   south: 1
   east: 1
@@ -538,8 +537,58 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemyPrefab: {fileID: 8731047138970188411, guid: bf603d9055f15e14caeb05435d255f75, type: 3}
-  minEnemies: 3
-  maxEnemies: 6
+  minEnemies: 5
+  maxEnemies: 8
+  doorBarrierPrefab: {fileID: 6873672282548014664, guid: 06ce302ab615b7b4094dde916b93aa7e, type: 3}
+  closeDelay: 0.2
+  doorThickness: 0.5
+  doorPadding: -0.5
+  doorInset: 0
+  enableCamTransition: 1
+  camTransitionDuration: 0.5
+  camCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  camResizeDuringTransition: 1
+  syncFadeWithCamera: 0
+  actorFadeDuration: 0
+  actorFadeCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  pullDistance: 1.5
+  pullDuration: 0.3
+  isBossRoom: 0
+  bossPrefab: {fileID: 9202198051294655913, guid: b47891df22c37e04ba0bcfad044beecf, type: 3}
+  isArmoryRoom: 0
+  upgradePickupPrefab: {fileID: 7054013890209100724, guid: dbae9522194bec74886ca029723ad769, type: 3}
+  useEntrySafeZone: 1
+  entrySafeDepth: 3
+  entrySafeExtraWidth: 0.5
+  minSpawnDistFromPlayer: 1.5
 --- !u!1 &8610392696869077077
 GameObject:
   m_ObjectHideFlags: 0

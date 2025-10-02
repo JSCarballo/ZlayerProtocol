@@ -14,22 +14,25 @@ public class RoomBuilder : MonoBehaviour
     public TileBase wallTile;
 
     [Header("Geometry")]
-    public Vector2Int roomSizeTiles = new(16, 10); // ancho x alto
-
-    [Header("Doors")]
-    public Door doorPrefab;
+    public Vector2Int roomSizeTiles = new(16, 10); // ancho x alto (tiles)
 
     // conexiones (las marca el generador)
     [HideInInspector] public bool north, south, east, west;
 
     public Bounds RoomBounds { get; private set; }
-    private readonly List<Door> doors = new();
+
+    // ==== NUEVO: info de anclas para puertas (centro + tamaño en unidades mundo)
+    public struct DoorSpawn
+    {
+        public Vector3 center;
+        public Vector2 size;
+        public DoorSpawn(Vector3 c, Vector2 s) { center = c; size = s; }
+    }
 
     public void Build()
     {
         floorMap.ClearAllTiles();
         wallsMap.ClearAllTiles();
-        doors.Clear();
 
         // Piso
         for (int y = 0; y < roomSizeTiles.y; y++)
@@ -48,78 +51,90 @@ public class RoomBuilder : MonoBehaviour
             wallsMap.SetTile(new Vector3Int(roomSizeTiles.x - 1, y, 0), wallTile);
         }
 
-        // Huecos y puertas SOLO si hay vecino
-        TryMakeDoorNorth();
-        TryMakeDoorSouth();
-        TryMakeDoorEast();
-        TryMakeDoorWest();
+        // Abrimos los huecos de puerta SOLO si hay vecino (3 tiles de ancho/alto)
+        CarveDoorways();
 
-        // Asegura bounds consistentes
+        // Bounds fiables a partir de renderers
         floorMap.CompressBounds();
         wallsMap.CompressBounds();
-
         var fr = floorMap.GetComponent<TilemapRenderer>();
         var wr = wallsMap.GetComponent<TilemapRenderer>();
         Bounds b = fr ? fr.bounds : new Bounds(transform.position, Vector3.one);
         if (wr) b.Encapsulate(wr.bounds);
         RoomBounds = b;
 
-        // Ajusta trigger de la sala al rectángulo de la sala (mundo → local)
+        // Ajusta el trigger de la habitación al rectángulo de la sala
         var trigger = GetComponent<BoxCollider2D>();
         trigger.isTrigger = true;
         trigger.offset = transform.InverseTransformPoint(RoomBounds.center);
         trigger.size = RoomBounds.size;
     }
 
-    void TryMakeDoorNorth()
+    void CarveDoorways()
     {
-        if (!north) return;
-        int mid = roomSizeTiles.x / 2;
-        for (int dx = -1; dx <= 1; dx++)
-            wallsMap.SetTile(new Vector3Int(mid + dx, roomSizeTiles.y - 1, 0), null);
-        SpawnDoorAt(CellCenterWorld(mid, roomSizeTiles.y - 1));
-    }
-    void TryMakeDoorSouth()
-    {
-        if (!south) return;
-        int mid = roomSizeTiles.x / 2;
-        for (int dx = -1; dx <= 1; dx++)
-            wallsMap.SetTile(new Vector3Int(mid + dx, 0, 0), null);
-        SpawnDoorAt(CellCenterWorld(mid, 0));
-    }
-    void TryMakeDoorEast()
-    {
-        if (!east) return;
-        int mid = roomSizeTiles.y / 2;
-        for (int dy = -1; dy <= 1; dy++)
-            wallsMap.SetTile(new Vector3Int(roomSizeTiles.x - 1, mid + dy, 0), null);
-        SpawnDoorAt(CellCenterWorld(roomSizeTiles.x - 1, mid));
-    }
-    void TryMakeDoorWest()
-    {
-        if (!west) return;
-        int mid = roomSizeTiles.y / 2;
-        for (int dy = -1; dy <= 1; dy++)
-            wallsMap.SetTile(new Vector3Int(0, mid + dy, 0), null);
-        SpawnDoorAt(CellCenterWorld(0, mid));
+        int midX = roomSizeTiles.x / 2;
+        int midY = roomSizeTiles.y / 2;
+
+        if (north)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+                wallsMap.SetTile(new Vector3Int(midX + dx, roomSizeTiles.y - 1, 0), null);
+        }
+        if (south)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+                wallsMap.SetTile(new Vector3Int(midX + dx, 0, 0), null);
+        }
+        if (east)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+                wallsMap.SetTile(new Vector3Int(roomSizeTiles.x - 1, midY + dy, 0), null);
+        }
+        if (west)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+                wallsMap.SetTile(new Vector3Int(0, midY + dy, 0), null);
+        }
     }
 
     Vector3 CellCenterWorld(int x, int y)
     {
         var wp = wallsMap.CellToWorld(new Vector3Int(x, y, 0));
-        var cellSize = wallsMap.layoutGrid.cellSize;
-        return wp + new Vector3(cellSize.x, cellSize.y, 0) * 0.5f; // centro de celda
+        var cs = wallsMap.layoutGrid.cellSize;
+        return wp + new Vector3(cs.x, cs.y, 0) * 0.5f;
     }
 
-    void SpawnDoorAt(Vector3 worldPos)
-    {
-        if (!doorPrefab) return;
-        var door = Instantiate(doorPrefab, worldPos, Quaternion.identity, transform);
-        doors.Add(door);
-    }
+    public Vector2 GetCellSize() => wallsMap.layoutGrid.cellSize;
 
-    public void SetAllDoors(bool open)
+    // ==== NUEVO: devuelve anclas (centro y tamaño en mundo) para colocar barreras
+    public IEnumerable<DoorSpawn> GetDoorSpawns()
     {
-        foreach (var d in doors) if (d) d.SetOpen(open);
+        var cs = GetCellSize();
+        int midX = roomSizeTiles.x / 2;
+        int midY = roomSizeTiles.y / 2;
+
+        // Norte/SUR: hueco horizontal de 3 tiles x 1 tile
+        if (north)
+        {
+            Vector3 c = CellCenterWorld(midX, roomSizeTiles.y - 1);
+            yield return new DoorSpawn(c, new Vector2(cs.x * 3f, cs.y * 1f));
+        }
+        if (south)
+        {
+            Vector3 c = CellCenterWorld(midX, 0);
+            yield return new DoorSpawn(c, new Vector2(cs.x * 3f, cs.y * 1f));
+        }
+
+        // Este/Oeste: hueco vertical de 1 tile x 3 tiles
+        if (east)
+        {
+            Vector3 c = CellCenterWorld(roomSizeTiles.x - 1, midY);
+            yield return new DoorSpawn(c, new Vector2(cs.x * 1f, cs.y * 3f));
+        }
+        if (west)
+        {
+            Vector3 c = CellCenterWorld(0, midY);
+            yield return new DoorSpawn(c, new Vector2(cs.x * 1f, cs.y * 3f));
+        }
     }
 }

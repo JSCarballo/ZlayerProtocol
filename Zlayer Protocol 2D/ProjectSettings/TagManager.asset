@@ -9,6 +9,7 @@ TagManager:
   - Room
   - PowerUp
   - PLayer
+  - Walls
   layers:
   - Default
   - TransparentFX
