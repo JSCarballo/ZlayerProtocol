@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 2103551324408445694}
   - component: {fileID: 1701398981192419249}
   - component: {fileID: 8074739233009943929}
+  - component: {fileID: -7297981129944044101}
   m_Layer: 7
   m_Name: Enemy_Zombie
   m_TagString: Enemy
@@ -132,8 +133,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHP: 3
-  currentHP: 0
+  currentHP: 3
   destroyOnDeath: 1
+  invincible: 0
 --- !u!70 &2103551324408445694
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -199,3 +201,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   touchDamage: 1
   cooldown: 0.5
+--- !u!114 &-7297981129944044101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8731047138970188411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6b9d217f65dd5c4fbaf88eeb26baeb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

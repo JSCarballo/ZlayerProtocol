@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
+  m_Name: WU_NewUpgrade
+  m_EditorClassIdentifier: 
+  id: UP_DMG_20
+  displayName: Hollow-Point Rounds
+  description: 'DMG +20%
+
+    id: UP_DMG_20
+
+    displayName: Hollow-Point Rounds
+
+    upgrade:
+    DamageMult, amount = 1.2
+
+    unique = true, weight = 1.0'
+  icon: {fileID: 0}
+  upgrade:
+    type: 0
+    amount: 1.2
+  unique: 1
+  weight: 1

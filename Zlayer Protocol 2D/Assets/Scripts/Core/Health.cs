@@ -1,34 +1,53 @@
+﻿// Assets/Scripts/Combat/Health.cs
 using UnityEngine;
 using System;
 
 public class Health : MonoBehaviour
 {
-    public float maxHP = 6f;
-    public float currentHP; // opcional, o d�jalo p�blico
+    [Header("Vida")]
+    [SerializeField] private float maxHP = 6f;
+    [SerializeField] private float currentHP = -1f;
+
+    [Header("Comportamiento")]
     public bool destroyOnDeath = true;
+    public bool invincible = false;
 
-    public event Action<float, float> OnHealthChanged; // current,max
     public event Action OnDeath;
+    public event Action<float> OnDamaged; // ← NUEVO: notifica cuánto daño recibió
 
-    void Awake() => currentHP = maxHP;
+    public float MaxHP => maxHP;
+    public float CurrentHP => currentHP < 0f ? maxHP : currentHP;
 
-    public void Damage(float amount)
+    void Awake()
     {
-        if (currentHP <= 0) return;
-        currentHP = Mathf.Max(0, currentHP - amount);
-        OnHealthChanged?.Invoke(currentHP, maxHP);
-        if (currentHP <= 0) Die();
+        if (currentHP < 0f) currentHP = maxHP;
+    }
+
+    public void SetMax(float newMax, bool fill = true)
+    {
+        maxHP = Mathf.Max(1f, newMax);
+        if (fill) currentHP = maxHP;
+        currentHP = Mathf.Clamp(currentHP, 0f, maxHP);
     }
 
     public void Heal(float amount)
     {
-        currentHP = Mathf.Min(maxHP, currentHP + amount);
-        OnHealthChanged?.Invoke(currentHP, maxHP);
+        if (amount <= 0f) return;
+        currentHP = Mathf.Min(maxHP, CurrentHP + amount);
     }
 
-    void Die()
+    public void Damage(float amount)
     {
-        OnDeath?.Invoke();
-        if (destroyOnDeath) Destroy(gameObject);
+        if (invincible || amount <= 0f) return;
+
+        // Lanza evento ANTES de matar (para ver el número incluso si muere)
+        OnDamaged?.Invoke(amount);
+
+        currentHP = Mathf.Max(0f, CurrentHP - amount);
+        if (currentHP <= 0f)
+        {
+            OnDeath?.Invoke();
+            if (destroyOnDeath) Destroy(gameObject);
+        }
     }
 }

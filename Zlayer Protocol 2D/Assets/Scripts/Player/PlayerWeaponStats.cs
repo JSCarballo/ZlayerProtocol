@@ -1,18 +1,17 @@
-// Assets/Scripts/Player/PlayerWeaponStats.cs
 using UnityEngine;
 
 public class PlayerWeaponStats : MonoBehaviour
 {
     [Header("Multiplicadores")]
     public float damageMult = 1f;
-    public float fireRateMult = 1f;      // >1 = dispara más rápido
+    public float fireRateMult = 1f;        // >1 = dispara más rápido
     public float projectileSpeedMult = 1f;
 
     [Header("Extras")]
-    public int extraProjectiles = 0;     // proyectiles adicionales por disparo
+    public int extraProjectiles = 0;       // proyectiles adicionales
     public bool piercing = false;
     public bool bouncing = false;
-    public float spreadDegrees = 0f;     // apertura para múltiples proyectiles
+    public float spreadDegrees = 0f;       // abanico en grados
 
     public void Apply(WeaponUpgrade upgrade)
     {
@@ -34,12 +33,4 @@ public class PlayerWeaponStats : MonoBehaviour
                 spreadDegrees += upgrade.amount; break;
         }
     }
-}
-
-[System.Serializable]
-public struct WeaponUpgrade
-{
-    public enum Type { DamageMult, FireRateMult, SpeedMult, ExtraProjectiles, Piercing, Bounce, SpreadAdd }
-    public Type type;
-    public float amount; // usa 1.2 = +20%, 2.0 = +100%, etc. o enteros para extras
 }

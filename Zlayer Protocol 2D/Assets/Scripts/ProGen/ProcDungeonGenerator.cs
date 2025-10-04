@@ -5,22 +5,20 @@ using System.Collections.Generic;
 
 public class ProcDungeonGenerator : MonoBehaviour
 {
-    [Header("Room Count")]
-    public int minRooms = 8;    // incluye start (sin contar extras)
-    public int maxRooms = 12;   // incluye start (sin contar extras)
+    [Header("Room Count (sin extras)")]
+    [Tooltip("Mínimo de habitaciones base (incluye Start). Extras (Boss/Armory) no cuentan aquí.")]
+    public int minRooms = 8;
+    public int maxRooms = 12;
 
-    [Header("Extras")]
-    [Tooltip("La sala del Jefe se agrega como hoja adicional con 1 entrada.")]
-    public bool bossIsExtra = true;
-
-    [Tooltip("La Armory se agrega como hoja adicional con 1 entrada.")]
-    public bool armoryIsExtra = true;
+    [Header("Extras (hojas de 1 acceso)")]
+    public bool bossIsExtra = true;     // Boss como hoja adicional
+    public bool armoryIsExtra = true;   // Armory como hoja adicional
 
     [Header("Layout")]
     public Vector2Int start = Vector2Int.zero;
 
     [Range(0f, 0.8f)]
-    [Tooltip("Probabilidad de ramificar desde una sala ya creada.")]
+    [Tooltip("Probabilidad de ramificar desde una celda existente al generar el layout.")]
     public float branchChance = 0.25f;
 
     [Header("Prefabs")]
@@ -29,9 +27,6 @@ public class ProcDungeonGenerator : MonoBehaviour
     public GameObject bossPrefab;
     public GameObject playerPrefab;
     public GameObject doorBarrierPrefab;
-
-    [Header("Pickups / Mejoras")]
-    [Tooltip("Prefab del objeto de mejora (pickup) que aparecerá en Armory y tras el jefe.")]
     public GameObject upgradePickupPrefab;
 
     [Header("Room Params")]
@@ -54,28 +49,48 @@ public class ProcDungeonGenerator : MonoBehaviour
     IEnumerator GenerateRoutine()
     {
         GenerateCore();
-        yield return null;
+        yield return null; // espera 1 frame por tilemap/colliders
 
         if (rooms.TryGetValue(start, out var startRoom))
+        {
             CameraRoomLock.Instance?.SnapToRoom(startRoom.RoomBounds);
+        }
     }
 
     void GenerateCore()
     {
         rooms.Clear();
 
-        // 1) Construir set base [min,max] (sin contar extras)
+        // ===== 1) Mapa base =====
         int targetRooms = Random.Range(minRooms, maxRooms + 1);
         HashSet<Vector2Int> cells = BuildRoomsSet(targetRooms);
 
-        // 2) Elegir hojas estrictas (1 sola entrada) para Boss y Armory (diferentes)
-        var bossLeaf = FindStrictLeaf(cells, start, forbid: null);                 // la más lejana posible
-        var armoryLeaf = FindStrictLeaf(cells, start, forbid: new() { bossLeaf.bossCell }); // otra hoja distinta
+        // ===== 2) Elegir hojas EXTRA (siempre intentamos agregarlas físicamente) =====
+        //     - Boss: celda nueva con 1 vecino (si es posible)
+        //     - Armory: otra celda nueva distinta de Boss
+        Vector2Int bossAttach, bossCell;
+        if (!TryFindStrictLeaf(cells, start, null, out bossAttach, out bossCell))
+        {
+            // fuerza hoja extra desde la celda más lejana con algún vecino libre
+            TryForceExtraLeaf(cells, start, null, out bossAttach, out bossCell);
+        }
 
-        if (bossIsExtra && bossLeaf.bossCell != bossLeaf.attachFrom) cells.Add(bossLeaf.bossCell);
-        if (armoryIsExtra && armoryLeaf.bossCell != armoryLeaf.attachFrom) cells.Add(armoryLeaf.bossCell);
+        Vector2Int armAttach, armCell;
+        var forbidArm = new HashSet<Vector2Int> { bossCell };
+        if (!TryFindStrictLeaf(cells, start, forbidArm, out armAttach, out armCell))
+        {
+            TryForceExtraLeaf(cells, start, forbidArm, out armAttach, out armCell);
+        }
 
-        // 3) Instanciar salas
+        // Añadir físicamente las hojas extra si se piden
+        if (bossIsExtra && bossCell != bossAttach) cells.Add(bossCell);
+        if (armoryIsExtra && armCell != armAttach && armCell != bossCell) cells.Add(armCell);
+
+        // Determinar definitivos (si extras están apagados, podemos usar farthest como fallback visual)
+        Vector2Int chosenBossCell = bossIsExtra && cells.Contains(bossCell) ? bossCell : GetFarthestCell(cells, start);
+        Vector2Int chosenArmCell = armoryIsExtra && cells.Contains(armCell) ? armCell : FindAnotherFarthest(cells, start, chosenBossCell);
+
+        // ===== 3) Instanciar salas =====
         foreach (var cell in cells)
         {
             var pos = new Vector3(cell.x * roomWorldSpacing.x, cell.y * roomWorldSpacing.y, 0);
@@ -83,7 +98,7 @@ public class ProcDungeonGenerator : MonoBehaviour
             rooms[cell] = room;
         }
 
-        // 4) Conexiones + Build + runtime base
+        // ===== 4) Conexiones + Build + runtime base + registro mapa =====
         foreach (var kv in rooms)
         {
             var cell = kv.Key;
@@ -98,12 +113,25 @@ public class ProcDungeonGenerator : MonoBehaviour
 
             var runtime = room.GetComponent<RoomRuntime>();
             if (!runtime) runtime = room.gameObject.AddComponent<RoomRuntime>();
+
             runtime.enemyPrefab = enemyPrefab;
             runtime.doorBarrierPrefab = doorBarrierPrefab;
-            runtime.upgradePickupPrefab = upgradePickupPrefab; // para Armory y drop del Boss
+            runtime.upgradePickupPrefab = upgradePickupPrefab;
+            runtime.gridCell = cell;
+
+            // Registrar sala en el minimapa con flags correctos ya decididos
+            bool isStart = (cell == start);
+            bool isBoss = (cell == chosenBossCell);
+            bool isArm = (cell == chosenArmCell);
+
+            DungeonMapRegistry.Instance?.RegisterRoom(
+                cell,
+                room.north, room.south, room.east, room.west,
+                isStart, isBoss, isArm
+            );
         }
 
-        // 5) Start + Player
+        // ===== 5) Start + Player =====
         if (rooms.TryGetValue(start, out var startRoom))
         {
             var runtime = startRoom.GetComponent<RoomRuntime>();
@@ -122,35 +150,23 @@ public class ProcDungeonGenerator : MonoBehaviour
             }
         }
 
-        // 6) Configurar Boss y Armory
-        Vector2Int fallbackFarthest = GetFarthestCell(new HashSet<Vector2Int>(rooms.Keys), start);
-
-        // Boss
-        Vector2Int chosenBossCell =
-            (bossIsExtra && rooms.ContainsKey(bossLeaf.bossCell) && bossLeaf.bossCell != start)
-            ? bossLeaf.bossCell : fallbackFarthest;
-
-        if (chosenBossCell != start && rooms.TryGetValue(chosenBossCell, out var bossRoom))
+        // ===== 6) Configurar Boss y Armory =====
+        if (rooms.TryGetValue(chosenBossCell, out var bossRoom))
         {
             var bossRt = bossRoom.GetComponent<RoomRuntime>();
             bossRt.ConfigureAsBossRoom(bossPrefab);
         }
 
-        // Armory (evitar solapar con Boss/Start)
-        Vector2Int chosenArmoryCell =
-            (armoryIsExtra && rooms.ContainsKey(armoryLeaf.bossCell) &&
-             armoryLeaf.bossCell != start && armoryLeaf.bossCell != chosenBossCell)
-            ? armoryLeaf.bossCell : FindAnotherLeafOrFarthest(rooms, start, chosenBossCell);
-
-        if (chosenArmoryCell != start && chosenArmoryCell != chosenBossCell &&
-            rooms.TryGetValue(chosenArmoryCell, out var armRoom))
+        if (rooms.TryGetValue(chosenArmCell, out var armRoom))
         {
             var armRt = armRoom.GetComponent<RoomRuntime>();
             armRt.ConfigureAsArmoryRoom(upgradePickupPrefab);
         }
     }
 
-    // ---------- helpers de layout ----------
+    // =======================
+    //   Construcción del set
+    // =======================
     HashSet<Vector2Int> BuildRoomsSet(int targetRooms)
     {
         HashSet<Vector2Int> cells = new() { start };
@@ -187,70 +203,63 @@ public class ProcDungeonGenerator : MonoBehaviour
         };
     }
 
-    (Vector2Int attachFrom, Vector2Int bossCell) FindStrictLeaf(HashSet<Vector2Int> cells, Vector2Int source, HashSet<Vector2Int> forbid)
+    // =======================
+    //     Hojas estrictas
+    // =======================
+    bool TryFindStrictLeaf(HashSet<Vector2Int> cells, Vector2Int source, HashSet<Vector2Int> forbid,
+                           out Vector2Int attachFrom, out Vector2Int extraCell)
     {
+        attachFrom = source; extraCell = source;
+
         var dist = BFS(cells, source);
+        var ordered = new List<Vector2Int>(cells);
+        ordered.Sort((a, b) => dist.GetValueOrDefault(b, -1).CompareTo(dist.GetValueOrDefault(a, -1)));
 
-        Vector2Int bestAttach = source;
-        Vector2Int bestLeaf = source;
-        int bestDist = -1;
-
-        foreach (var c in cells)
+        foreach (var c in ordered)
         {
-            int dc = dist.GetValueOrDefault(c, -1);
-            if (dc < 0) continue;
-
             foreach (var dir in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
             {
-                Vector2Int n = c + dir;
-                if (forbid != null && forbid.Contains(n)) continue;
+                var n = c + dir;
                 if (cells.Contains(n)) continue;
+                if (forbid != null && forbid.Contains(n)) continue;
 
-                int neighbors = CountNeighborsInSet(n, cells);
-                if (neighbors == 1) // estrictamente 1 entrada
+                if (CountNeighborsInSet(n, cells) == 1)
                 {
-                    if (dc > bestDist)
-                    {
-                        bestDist = dc;
-                        bestAttach = c;
-                        bestLeaf = n;
-                    }
+                    attachFrom = c;
+                    extraCell = n;
+                    return true;
                 }
             }
         }
-
-        if (bestDist >= 0)
-            return (bestAttach, bestLeaf);
-
-        // fallback
-        var far = GetFarthestCell(cells, source);
-        return (far, far);
+        return false;
     }
 
-    Vector2Int FindAnotherLeafOrFarthest(Dictionary<Vector2Int, RoomBuilder> map, Vector2Int source, Vector2Int avoid)
+    bool TryForceExtraLeaf(HashSet<Vector2Int> cells, Vector2Int source, HashSet<Vector2Int> forbid,
+                           out Vector2Int attachFrom, out Vector2Int extraCell)
     {
-        var cells = new HashSet<Vector2Int>(map.Keys);
-        var leaf = FindStrictLeaf(cells, source, new() { avoid });
-        if (leaf.bossCell != leaf.attachFrom && map.ContainsKey(leaf.bossCell))
-            return leaf.bossCell;
+        attachFrom = source; extraCell = source;
 
-        // fallback: otra celda lejana que no sea avoid
-        Vector2Int far = GetFarthestCell(cells, source);
-        if (far == avoid) // busca la segunda más lejana simple
+        var dist = BFS(cells, source);
+        var ordered = new List<Vector2Int>(cells);
+        ordered.Sort((a, b) => dist.GetValueOrDefault(b, -1).CompareTo(dist.GetValueOrDefault(a, -1)));
+
+        foreach (var c in ordered)
         {
-            var dist = BFS(cells, source);
-            int best = -1; Vector2Int pick = source;
-            foreach (var kv in dist)
+            foreach (var dir in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
             {
-                if (kv.Key == avoid) continue;
-                if (kv.Value != int.MaxValue && kv.Value > best)
-                {
-                    best = kv.Value; pick = kv.Key;
-                }
+                var n = c + dir;
+                if (cells.Contains(n)) continue;
+                if (forbid != null && forbid.Contains(n)) continue;
+
+                attachFrom = c;
+                extraCell = n;
+                return true;
             }
-            return pick;
         }
-        return far;
+        // no hay huecos libres (muy raro) → caída
+        attachFrom = GetFarthestCell(cells, source);
+        extraCell = attachFrom; // no-extra posible
+        return false;
     }
 
     int CountNeighborsInSet(Vector2Int cell, HashSet<Vector2Int> set)
@@ -297,6 +306,21 @@ public class ProcDungeonGenerator : MonoBehaviour
             }
         }
         return far;
+    }
+
+    Vector2Int FindAnotherFarthest(HashSet<Vector2Int> cells, Vector2Int source, Vector2Int avoid)
+    {
+        var dist = BFS(cells, source);
+        Vector2Int pick = source; int best = -1;
+        foreach (var kv in dist)
+        {
+            if (kv.Key == avoid) continue;
+            if (kv.Value != int.MaxValue && kv.Value > best)
+            {
+                best = kv.Value; pick = kv.Key;
+            }
+        }
+        return pick;
     }
 
     IEnumerable<Vector2Int> Neigh(Vector2Int c)

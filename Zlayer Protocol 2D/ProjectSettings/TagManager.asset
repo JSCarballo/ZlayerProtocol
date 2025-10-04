@@ -10,6 +10,7 @@ TagManager:
   - PowerUp
   - PLayer
   - Walls
+  - Boss
   layers:
   - Default
   - TransparentFX

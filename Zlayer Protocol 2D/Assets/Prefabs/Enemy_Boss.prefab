@@ -15,9 +15,10 @@ GameObject:
   - component: {fileID: 8115238473514933173}
   - component: {fileID: 8482027888397683848}
   - component: {fileID: 3891885265976301825}
+  - component: {fileID: -3886991005356162131}
   m_Layer: 7
   m_Name: Enemy_Boss
-  m_TagString: Enemy
+  m_TagString: Boss
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -132,8 +133,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHP: 30
-  currentHP: 0
+  currentHP: 30
   destroyOnDeath: 1
+  invincible: 0
 --- !u!70 &8115238473514933173
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -199,3 +201,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   touchDamage: 1
   cooldown: 0.5
+--- !u!114 &-3886991005356162131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9202198051294655913}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6b9d217f65dd5c4fbaf88eeb26baeb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

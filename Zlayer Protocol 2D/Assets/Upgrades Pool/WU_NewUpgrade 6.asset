@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
+  m_Name: WU_NewUpgrade 6
+  m_EditorClassIdentifier: 
+  id: UP_SPREAD_10
+  displayName: Shattered Choke
+  description: "Spread +10\xB0 (abre abanico \u2192 \xFAtil con multi-proyectil)\nid:
+    UP_SPREAD_10\ndisplayName: Shattered Choke\nupgrade: SpreadAdd, amount = 10f\nunique
+    = true, weight = 0.6"
+  icon: {fileID: 0}
+  upgrade:
+    type: 6
+    amount: 10
+  unique: 1
+  weight: 0.6
