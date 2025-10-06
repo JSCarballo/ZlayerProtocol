@@ -136,7 +136,7 @@ public class ProcDungeonGenerator : MonoBehaviour
 
         yield return null; // deja inicializar tilemaps/colliders
 
-        // 7) Player a Start + cámara + desbloqueo seguro
+        // 7) Player a Start + cámara + follow solo en 1B + desbloqueo seguro
         if (rooms.TryGetValue(start, out var startRoom))
         {
             GameObject player = GameObject.FindGameObjectWithTag("Player");
@@ -161,7 +161,13 @@ public class ProcDungeonGenerator : MonoBehaviour
                 CameraRoomLock.Instance?.SnapToRoom(startRoom.RoomBounds);
 
                 var locker = player.GetComponent<PlayerControlLocker>();
-                if (locker) locker.HardUnlock(); // ← si venía lockeado por el ascensor
+                if (locker) locker.HardUnlock(); // si venía lockeado por el ascensor
+
+                // Follow SOLO si el piso es tipo arena (1B). En otros pisos, lock por salas.
+                if (active.isArenaFloor)
+                    CameraRoomLock.Instance?.EnterFollowMode(player.transform, startRoom.RoomBounds, 6f);
+                else
+                    CameraRoomLock.Instance?.ExitFollowMode();
             }
         }
 

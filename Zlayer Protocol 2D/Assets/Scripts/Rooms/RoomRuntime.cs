@@ -164,10 +164,18 @@ public class RoomRuntime : MonoBehaviour
 
         DungeonMapRegistry.Instance?.NotifyPlayerEnteredRoom(gridCell);
 
-        if (enableCamTransition && CameraRoomLock.Instance)
-            StartCoroutine(CameraRoomLock.Instance.PanToRoom(builder.RoomBounds, camTransitionDuration, camCurve, camResizeDuringTransition));
+        // En 1B (follow activo), solo Snap (sin pan) para asegurar clamp correcto
+        if (CameraRoomLock.Instance && CameraRoomLock.Instance.IsFollowActive)
+        {
+            CameraRoomLock.Instance.SnapToRoom(builder.RoomBounds);
+        }
         else
-            CameraRoomLock.Instance?.SnapToRoom(builder.RoomBounds);
+        {
+            if (enableCamTransition && CameraRoomLock.Instance)
+                StartCoroutine(CameraRoomLock.Instance.PanToRoom(builder.RoomBounds, camTransitionDuration, camCurve, camResizeDuringTransition));
+            else
+                CameraRoomLock.Instance?.SnapToRoom(builder.RoomBounds);
+        }
 
         StartCoroutine(EnterAnyRoomSequence(other.transform));
     }
@@ -191,7 +199,7 @@ public class RoomRuntime : MonoBehaviour
             else { SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset); upgradeSpawned = true; }
         }
 
-        // Arena 1B (independiente de visited)
+        // Arena 1B
         if (overrideToArena && !arenaTriggered)
         {
             arenaTriggered = true;
@@ -640,7 +648,7 @@ public class RoomRuntime : MonoBehaviour
     static Vector3 ClampInside(Bounds b, Vector3 p, float margin)
     {
         float x = Mathf.Clamp(p.x, b.min.x + margin, b.max.x - margin);
-        float y = Mathf.Clamp(p.y, b.min.y + margin, b.max.y - margin);
+        float y = Mathf.Clamp(p.y, b.min.y, b.max.y - margin);
         return new Vector3(x, y, p.z);
     }
 }
