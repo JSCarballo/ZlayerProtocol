@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8798bb2bb3bfba64982793506b1780bb, type: 3}
+  m_Name: Floor_2
+  m_EditorClassIdentifier: 
+  floorId: 2
+  displayName: Floor 2
+  minRooms: 10
+  maxRooms: 14
+  branchChance: 0.35
+  bossIsExtra: 1
+  armoryIsExtra: 1
+  enemyMin: 5
+  enemyMax: 8
+  isArenaFloor: 0
+  arenaWaves: 3
+  arenaWaveMin: 6
+  arenaWaveMax: 10
+  arenaInterval: 1
+  hasBoss: 1
+  bossPrefab: {fileID: 9202198051294655913, guid: b47891df22c37e04ba0bcfad044beecf, type: 3}
+  isFinalBoss: 0
+  enemyPrefab: {fileID: 8731047138970188411, guid: bf603d9055f15e14caeb05435d255f75, type: 3}
+  doorBarrierPrefab: {fileID: 6873672282548014664, guid: 06ce302ab615b7b4094dde916b93aa7e, type: 3}
+  upgradePickupPrefab: {fileID: 7054013890209100724, guid: dbae9522194bec74886ca029723ad769, type: 3}
+  elevatorExitPrefab: {fileID: 2311541883464266066, guid: 6651c0b0424cef642a7d7bd656fcff71, type: 3}
+  roomWorldSpacing: {x: 16, y: 9}
+  defaultRoomPrefab: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+  overrideStartRoomPrefab: {fileID: 0}

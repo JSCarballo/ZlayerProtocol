@@ -1,114 +1,179 @@
-// Assets/Scripts/UI/MinimapUI.cs
+﻿// Assets/Scripts/UI/MinimapUI.cs
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 
+[DefaultExecutionOrder(100)] // corre después de los managers base
 public class MinimapUI : MonoBehaviour
 {
+    [Header("Refs (requeridos)")]
+    public RectTransform container; // Panel vacío donde instanciamos iconos
+
+    [Header("Prefabs de iconos (Image)")]
+    public Image roomIconPrefab;
+    public Image bossIconPrefab;
+    public Image armoryIconPrefab;
+    public Image playerIconPrefab;
+
     [Header("Layout")]
-    public RectTransform content; // contenedor de iconos
-    public Vector2 cellSize = new(12f, 12f);
-    public float cellSpacing = 2f;
+    public float cellSize = 20f;          // tamaño en píxeles por celda
+    public bool autoCenter = true;        // centrar contenido al reconstruir
+    public Vector2 manualOffset = Vector2.zero; // offset extra si lo quieres mover
 
-    [Header("Colors")]
-    public Color colorUnknown = new(0.2f, 0.2f, 0.2f, 0.6f);
-    public Color colorDiscovered = new(0.6f, 0.6f, 0.6f, 0.9f);
-    public Color colorVisited = Color.white;
-    public Color colorCurrent = new(0.2f, 0.8f, 1f, 1f);
-    public Color colorBoss = new(1f, 0.3f, 0.3f, 1f);
-    public Color colorArmory = new(1f, 0.85f, 0.3f, 1f);
+    readonly Dictionary<Vector2Int, Image> icons = new();
+    Image playerIcon;
 
-    [Header("Sprites (opcionales)")]
-    public Sprite roomSprite;   // cuadrado
-    public Sprite bossSprite;   // icono boss
-    public Sprite armorySprite; // icono armory
-
-    Dictionary<Vector2Int, Image> icons = new();
-    Vector2Int currentCell;
-
-    void Awake()
-    {
-        if (!content) content = GetComponent<RectTransform>();
-    }
+    Coroutine waitRoutine;
 
     void OnEnable()
     {
-        if (!DungeonMapRegistry.Instance) return;
-        DungeonMapRegistry.Instance.OnRoomRegistered += HandleReg;
-        DungeonMapRegistry.Instance.OnRoomUpdated += HandleUpd;
-        DungeonMapRegistry.Instance.OnPlayerEnteredRoom += HandleEnter;
+        // Siempre quedamos escuchando la señal del generador (esté o no el registry)
+        ProcDungeonGenerator.OnGenerated += HandleGenerated;
 
-        // Por si se habilita tarde:
-        foreach (var r in DungeonMapRegistry.Instance.AllRooms()) HandleReg(r);
+        // Arrancamos una rutina que espera a que aparezca el Registry y entonces se suscribe
+        waitRoutine = StartCoroutine(EnsureRegistryAndBindThenRebuild());
     }
 
     void OnDisable()
     {
-        if (!DungeonMapRegistry.Instance) return;
-        DungeonMapRegistry.Instance.OnRoomRegistered -= HandleReg;
-        DungeonMapRegistry.Instance.OnRoomUpdated -= HandleUpd;
-        DungeonMapRegistry.Instance.OnPlayerEnteredRoom -= HandleEnter;
-    }
+        ProcDungeonGenerator.OnGenerated -= HandleGenerated;
+        if (waitRoutine != null) StopCoroutine(waitRoutine);
 
-    void HandleReg(DungeonMapRegistry.RoomInfo info) => CreateOrUpdate(info);
-    void HandleUpd(DungeonMapRegistry.RoomInfo info) => CreateOrUpdate(info);
-
-    void HandleEnter(Vector2Int cell)
-    {
-        currentCell = cell;
-        // repintar current
-        foreach (var kv in icons) RefreshColor(kv.Key);
-    }
-
-    void CreateOrUpdate(DungeonMapRegistry.RoomInfo info)
-    {
-        if (!icons.TryGetValue(info.cell, out var img))
+        var reg = DungeonMapRegistry.Instance;
+        if (reg != null)
         {
-            var go = new GameObject($"Mini_{info.cell.x}_{info.cell.y}", typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(content, false);
-            img = go.GetComponent<Image>();
-            img.raycastTarget = false;
-            icons[info.cell] = img;
+            reg.OnRoomRegistered -= HandleRegistered;
+            reg.OnRoomUpdated -= HandleUpdated;
+            reg.OnPlayerEnteredRoom -= HandlePlayerEntered;
+        }
+    }
 
-            var rt = img.rectTransform;
-            rt.sizeDelta = cellSize;
-            rt.anchoredPosition = GridToLocal(info.cell);
+    IEnumerator EnsureRegistryAndBindThenRebuild()
+    {
+        // Espera hasta que exista el Registry
+        while (DungeonMapRegistry.Instance == null) yield return null;
+
+        var reg = DungeonMapRegistry.Instance;
+        reg.OnRoomRegistered += HandleRegistered;
+        reg.OnRoomUpdated += HandleUpdated;
+        reg.OnPlayerEnteredRoom += HandlePlayerEntered;
+
+        RebuildFromRegistry(); // ahora sí, hay datos para leer
+    }
+
+    void HandleGenerated()
+    {
+        // Al finalizar la generación del piso, rehacemos el mapa
+        RebuildFromRegistry();
+    }
+
+    void RebuildFromRegistry()
+    {
+        if (!container) { Debug.LogWarning("[MinimapUI] 'container' no asignado."); return; }
+        if (!roomIconPrefab) { Debug.LogWarning("[MinimapUI] 'roomIconPrefab' no asignado."); return; }
+
+        // Limpia elementos previos
+        foreach (Transform t in container) Destroy(t.gameObject);
+        icons.Clear();
+        playerIcon = null;
+
+        var reg = DungeonMapRegistry.Instance;
+        if (reg == null) return;
+
+        var all = new List<DungeonMapRegistry.RoomInfo>(reg.AllRooms());
+        if (all.Count == 0) return; // el generador aún no registró nada (HandleGenerated volverá a llamar)
+
+        // Calcular bounds en celdas para auto-centrar
+        int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+        foreach (var info in all)
+        {
+            minX = Mathf.Min(minX, info.cell.x);
+            minY = Mathf.Min(minY, info.cell.y);
+            maxX = Mathf.Max(maxX, info.cell.x);
+            maxY = Mathf.Max(maxY, info.cell.y);
         }
 
-        // sprite seg�n tipo
-        if (info.isBoss && bossSprite) img.sprite = bossSprite;
-        else if (info.isArmory && armorySprite) img.sprite = armorySprite;
-        else img.sprite = roomSprite;
+        Vector2 offset = Vector2.zero;
+        if (autoCenter)
+        {
+            Vector2 centerCell = new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+            offset = -centerCell * cellSize;
+        }
+        offset += manualOffset;
 
-        RefreshColor(info.cell, info);
+        // Instanciar todos los íconos
+        foreach (var info in all)
+        {
+            InstantiateRoomIcon(info, offset);
+            HandleUpdated(info); // aplica discovered/visited
+        }
+
+        // Player icon en la sala Start (si ya existe, OnPlayerEntered lo actualizará)
+        var startCell = FindStartCell(all);
+        if (playerIconPrefab)
+        {
+            playerIcon = Instantiate(playerIconPrefab, container);
+            playerIcon.rectTransform.anchoredPosition = GridToUI(startCell, offset);
+        }
     }
 
-    void RefreshColor(Vector2Int cell)
+    void InstantiateRoomIcon(DungeonMapRegistry.RoomInfo info, Vector2 offset)
     {
-        if (!DungeonMapRegistry.Instance) return;
-        if (!icons.TryGetValue(cell, out var img)) return;
-        if (!DungeonMapRegistry.Instance.TryGet(cell, out var info)) return;
-        RefreshColor(cell, info);
+        Image prefab = roomIconPrefab;
+        if (info.isBoss && bossIconPrefab) prefab = bossIconPrefab;
+        else if (info.isArmory && armoryIconPrefab) prefab = armoryIconPrefab;
+
+        var img = Instantiate(prefab, container);
+        img.gameObject.name = $"Room_{info.cell.x}_{info.cell.y}";
+        img.rectTransform.anchoredPosition = GridToUI(info.cell, offset);
+        img.enabled = info.discovered;
+        icons[info.cell] = img;
     }
 
-    void RefreshColor(Vector2Int cell, DungeonMapRegistry.RoomInfo info)
+    void HandleRegistered(DungeonMapRegistry.RoomInfo info)
     {
-        if (!icons.TryGetValue(cell, out var img)) return;
-
-        Color c;
-        if (cell == currentCell) c = colorCurrent;
-        else if (info.visited) c = info.isBoss ? colorBoss : (info.isArmory ? colorArmory : colorVisited);
-        else if (info.discovered) c = colorDiscovered;
-        else c = colorUnknown;
-
-        img.color = c;
+        var offset = ComputeCurrentOffset();
+        if (!icons.ContainsKey(info.cell))
+            InstantiateRoomIcon(info, offset);
     }
 
-    Vector2 GridToLocal(Vector2Int cell)
+    void HandleUpdated(DungeonMapRegistry.RoomInfo info)
     {
-        // coloca (0,0) en el centro visual del contenedor
-        float stepX = cellSize.x + cellSpacing;
-        float stepY = cellSize.y + cellSpacing;
-        return new Vector2(cell.x * stepX, cell.y * stepY);
+        if (icons.TryGetValue(info.cell, out var img) && img)
+        {
+            img.enabled = info.discovered;
+            img.color = info.visited ? Color.white : new Color(1f, 1f, 1f, 0.6f);
+        }
+    }
+
+    void HandlePlayerEntered(Vector2Int cell)
+    {
+        var offset = ComputeCurrentOffset();
+        if (!playerIcon && playerIconPrefab) playerIcon = Instantiate(playerIconPrefab, container);
+        if (playerIcon) playerIcon.rectTransform.anchoredPosition = GridToUI(cell, offset);
+        if (icons.TryGetValue(cell, out var img) && img) img.enabled = true;
+    }
+
+    Vector2 GridToUI(Vector2Int cell, Vector2 offset)
+    {
+        return new Vector2(cell.x * cellSize, cell.y * cellSize) + offset;
+    }
+
+    Vector2Int FindStartCell(List<DungeonMapRegistry.RoomInfo> all)
+    {
+        foreach (var r in all) if (r.isStart) return r.cell;
+        return Vector2Int.zero;
+    }
+
+    Vector2 ComputeCurrentOffset()
+    {
+        foreach (var kv in icons)
+        {
+            var cell = kv.Key;
+            var pos = kv.Value.rectTransform.anchoredPosition;
+            return pos - new Vector2(cell.x * cellSize, cell.y * cellSize);
+        }
+        return manualOffset;
     }
 }

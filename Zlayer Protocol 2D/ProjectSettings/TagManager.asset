@@ -11,6 +11,7 @@ TagManager:
   - PLayer
   - Walls
   - Boss
+  - Elevator
   layers:
   - Default
   - TransparentFX
