@@ -4885,7 +4885,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 6048853122444745347}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 0}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1f633f4c8ee11244788d702c5d2dc7e8, type: 3}
   m_Name: 
@@ -6210,6 +6210,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2287729406339978330, guid: 890b736f971781c44895ab3171a80c0f, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -5110002124576299208, guid: 209beff3f65f90b4298e9b9108815f71, type: 3}
     - target: {fileID: 2627890925218881014, guid: 890b736f971781c44895ab3171a80c0f, type: 3}
       propertyPath: toDisableExplicit.Array.size
       value: 2

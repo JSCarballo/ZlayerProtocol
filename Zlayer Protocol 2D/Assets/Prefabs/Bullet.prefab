@@ -12,8 +12,8 @@ GameObject:
   - component: {fileID: 2150009035954022713}
   - component: {fileID: 1541051304976406932}
   - component: {fileID: 1320297112324846312}
-  - component: {fileID: 7218826095986822774}
   - component: {fileID: 7953334199535520780}
+  - component: {fileID: 4122555281348762119}
   m_Layer: 8
   m_Name: Bullet
   m_TagString: Untagged
@@ -154,23 +154,6 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_Radius: 0.125
---- !u!114 &7218826095986822774
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5128106100296778996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4cdf810e68f9aeb449fc518a07679070, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  damage: 1
-  destroyOnHit: 1
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 128
 --- !u!114 &7953334199535520780
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,3 +167,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   wallsLayerName: Walls
+--- !u!114 &4122555281348762119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5128106100296778996}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10cbdc4fafa37224aa0ae620d67dce65, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  speed: 16
+  lifetime: 2.5
+  faceVelocity: 1
+  damage: 1
+  damageLayers:
+    serializedVersion: 2
+    m_Bits: 128
