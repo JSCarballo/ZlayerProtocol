@@ -1,25 +1,31 @@
 using UnityEngine;
-using System.Collections;
 
+/// Sincroniza Torso (apuntado) y Legs (caminar) en 4 direcciones con sprites 40x40.
+/// - Piernas: Idle/Walk inmediato según input (no por inercia).
+/// - Torso : Aim cardinal (±1,0)/(0,±1) y actualización instantánea al disparar.
+/// - Pixel perfect: snap opcional del PlayerRoot (sin offsets en hijos).
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerAnim2D : MonoBehaviour
 {
-    [Header("References")]
-    public Animator bodyAnimator;
-    public Animator armsAnimator;
-    public SpriteRenderer bodyRenderer;
-    public SpriteRenderer armsRenderer;
-    public SpriteRenderer muzzleFlash;   // sprite del destello
-    public float muzzleFlashTime = 0.06f;
+    [Header("Refs")]
+    [SerializeField] private PlayerMovement2D movement;
+    [SerializeField] private PlayerAim4Dir aimProvider;
 
-    [Header("Locomotion")]
-    public float movingThreshold = 0.05f;
+    [Header("Animators")]
+    [SerializeField] private Animator torsoAnimator; // TorsoAnimator.controller (BlendTree 2D Dir con AimX/AimY)
+    [SerializeField] private Animator legsAnimator;  // LegsAnimator.controller  (IdleBT/WalkBT)
 
-    [Header("Aim Offsets (local, relativo a Arms)")]
-    public Vector2 muzzleOffsetRight = new Vector2(0.45f, 0.10f);
-    public Vector2 muzzleOffsetLeft = new Vector2(-0.45f, 0.10f);
-    public Vector2 muzzleOffsetUp = new Vector2(0.00f, 0.55f);
-    public Vector2 muzzleOffsetDown = new Vector2(0.00f, -0.20f);
+    [Header("Legs state names (Animator)")]
+    [SerializeField] private string legsStateIdle = "IdleBT";
+    [SerializeField] private string legsStateWalk = "WalkBT";
+
+    [Header("Pixel perfect")]
+    [SerializeField] private bool pixelSnapRoot = true; // snap del PlayerRoot
+    [SerializeField] private float pixelsPerUnit = 40f; // PPU = 40 para tus sprites 40x40
+
+    [Header("Varios")]
+    [SerializeField] private bool snapAimToCardinal = true; // forzar direcciones puras
+    [SerializeField] private float legsSpeedParam = 1f;    // 1 para Walk, 0 para Idle (cambio inmediato)
 
     private Rigidbody2D rb;
     private Vector2 lastMoveDir = Vector2.down;
@@ -28,110 +34,97 @@ public class PlayerAnim2D : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        if (muzzleFlash) muzzleFlash.enabled = false;
+        if (!movement) movement = GetComponent<PlayerMovement2D>();
+        if (!aimProvider) aimProvider = GetComponent<PlayerAim4Dir>();
     }
 
     void Update()
     {
-        UpdateLocomotion();
-        UpdateAimDirection();
+        UpdateLegsImmediate(); // fuerza Idle/Walk al instante por input WASD
+        UpdateTorsoParams();   // AimX/AimY cardinales para el BlendTree
     }
 
-    void UpdateLocomotion()
+    void LateUpdate()
     {
-        Vector2 vel = rb ? rb.linearVelocity : Vector2.zero;
-        float speed = vel.magnitude;
-        Vector2 moveDir = (speed > 0.0001f) ? vel.normalized : Vector2.zero;
-
-        if (bodyAnimator)
-        {
-            bodyAnimator.SetFloat("Speed", speed);
-            if (moveDir != Vector2.zero)
-            {
-                bodyAnimator.SetFloat("MoveX", moveDir.x);
-                bodyAnimator.SetFloat("MoveY", moveDir.y);
-                bodyAnimator.SetFloat("LastMoveX", moveDir.x);
-                bodyAnimator.SetFloat("LastMoveY", moveDir.y);
-                lastMoveDir = moveDir;
-            }
-            else
-            {
-                bodyAnimator.SetFloat("MoveX", 0f);
-                bodyAnimator.SetFloat("MoveY", 0f);
-                bodyAnimator.SetFloat("LastMoveX", lastMoveDir.x);
-                bodyAnimator.SetFloat("LastMoveY", lastMoveDir.y);
-            }
-        }
+        // Pixel snap del root para máxima estabilidad en cámara pixel-perfect
+        if (pixelSnapRoot) transform.position = SnapWorld(transform.position);
     }
 
-    void UpdateAimDirection()
+    // --------- LEGS: Idle/Walk inmediato (según input) ---------
+    void UpdateLegsImmediate()
     {
-        Vector2 aim = Vector2.zero;
-        if (Input.GetKey(KeyCode.RightArrow)) aim.x += 1f;
-        if (Input.GetKey(KeyCode.LeftArrow)) aim.x -= 1f;
-        if (Input.GetKey(KeyCode.UpArrow)) aim.y += 1f;
-        if (Input.GetKey(KeyCode.DownArrow)) aim.y -= 1f;
+        if (!legsAnimator) return;
 
-        if (aim != Vector2.zero)
+        Vector2 inputMove = movement ? movement.MoveVector : Vector2.zero;
+        bool isMoving = inputMove.sqrMagnitude > 0f;
+
+        if (inputMove != Vector2.zero) lastMoveDir = inputMove;
+
+        // Estos parámetros alimentan tus Blend Trees (IdleBT/WalkBT)
+        legsAnimator.SetFloat("MoveX", inputMove.x);
+        legsAnimator.SetFloat("MoveY", inputMove.y);
+        legsAnimator.SetFloat("LastMoveX", lastMoveDir.x);
+        legsAnimator.SetFloat("LastMoveY", lastMoveDir.y);
+
+        // Speed como 1/0 para transiciones instantáneas por condición
+        legsAnimator.SetFloat("Speed", isMoving ? legsSpeedParam : 0f);
+
+        // Forzar cambio de estado sin duración; evita que "termine" el ciclo de caminar
+        if (!legsAnimator.IsInTransition(0))
         {
-            if (Mathf.Abs(aim.x) > Mathf.Abs(aim.y)) aim = new Vector2(Mathf.Sign(aim.x), 0f);
-            else aim = new Vector2(0f, Mathf.Sign(aim.y));
-            lastAimDir = aim;
+            var st = legsAnimator.GetCurrentAnimatorStateInfo(0);
+            if (isMoving && !st.IsName(legsStateWalk))
+                legsAnimator.CrossFadeInFixedTime(legsStateWalk, 0f);
+            else if (!isMoving && !st.IsName(legsStateIdle))
+                legsAnimator.CrossFadeInFixedTime(legsStateIdle, 0f);
         }
-
-        if (armsAnimator)
-        {
-            armsAnimator.SetFloat("AimX", lastAimDir.x);
-            armsAnimator.SetFloat("AimY", lastAimDir.y);
-        }
-
-        UpdateMuzzleTransform(lastAimDir);
     }
 
-    void UpdateMuzzleTransform(Vector2 dir)
+    // --------- TORSO: Aim 4-dir para el Blend Tree ---------
+    void UpdateTorsoParams()
     {
-        if (!muzzleFlash || !armsRenderer) return;
+        if (!torsoAnimator) return;
 
-        if (dir == Vector2.right)
+        if (aimProvider)
         {
-            muzzleFlash.transform.localPosition = muzzleOffsetRight;
-            muzzleFlash.transform.localRotation = Quaternion.Euler(0, 0, 0);
+            Vector2 aim = aimProvider.GetAimDir();
+            if (aim != Vector2.zero) lastAimDir = aim;
         }
-        else if (dir == Vector2.left)
-        {
-            muzzleFlash.transform.localPosition = muzzleOffsetLeft;
-            muzzleFlash.transform.localRotation = Quaternion.Euler(0, 0, 180);
-        }
-        else if (dir == Vector2.up)
-        {
-            muzzleFlash.transform.localPosition = muzzleOffsetUp;
-            muzzleFlash.transform.localRotation = Quaternion.Euler(0, 0, 90);
-        }
-        else if (dir == Vector2.down)
-        {
-            muzzleFlash.transform.localPosition = muzzleOffsetDown;
-            muzzleFlash.transform.localRotation = Quaternion.Euler(0, 0, -90);
-        }
+
+        if (snapAimToCardinal) lastAimDir = ToCardinal(lastAimDir);
+
+        torsoAnimator.SetFloat("AimX", lastAimDir.x);
+        torsoAnimator.SetFloat("AimY", lastAimDir.y);
     }
 
-    // Llama esto desde el shooter para sincronizar flash/recoil con la bala
-    public void NotifyShot(Vector2 aimDir)
+    Vector2 ToCardinal(Vector2 v)
     {
-        if (aimDir != Vector2.zero)
-        {
-            if (Mathf.Abs(aimDir.x) > Mathf.Abs(aimDir.y)) lastAimDir = new Vector2(Mathf.Sign(aimDir.x), 0);
-            else lastAimDir = new Vector2(0, Mathf.Sign(aimDir.y));
-        }
-
-        if (armsAnimator) armsAnimator.SetTrigger("Shoot");
-        UpdateMuzzleTransform(lastAimDir);
-        if (muzzleFlash) StartCoroutine(FlashCR());
+        if (v == Vector2.zero) return Vector2.down;
+        return (Mathf.Abs(v.x) >= Mathf.Abs(v.y))
+            ? new Vector2(Mathf.Sign(v.x), 0f)
+            : new Vector2(0f, Mathf.Sign(v.y));
     }
 
-    IEnumerator FlashCR()
+    Vector3 SnapWorld(Vector3 pos)
     {
-        muzzleFlash.enabled = true;
-        yield return new WaitForSeconds(muzzleFlashTime);
-        muzzleFlash.enabled = false;
+        if (pixelsPerUnit <= 0f) return pos;
+        float ppu = pixelsPerUnit;
+        pos.x = Mathf.Round(pos.x * ppu) / ppu;
+        pos.y = Mathf.Round(pos.y * ppu) / ppu;
+        return pos;
     }
+
+    /// Llamado por el Shooter justo antes de disparar: fija aim YA.
+    public void SetAimInstant(Vector2 aimDir)
+    {
+        lastAimDir = ToCardinal(aimDir == Vector2.zero ? lastAimDir : aimDir);
+
+        if (torsoAnimator)
+        {
+            torsoAnimator.SetFloat("AimX", lastAimDir.x);
+            torsoAnimator.SetFloat("AimY", lastAimDir.y);
+        }
+    }
+
+    public void NotifyShot(Vector2 aimDir) => SetAimInstant(aimDir);
 }
