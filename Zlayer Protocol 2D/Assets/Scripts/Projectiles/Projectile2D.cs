@@ -1,32 +1,34 @@
 using UnityEngine;
 
-/// Bala 2D SIN autodestruirse por tiempo (a menos que lo habilites).
-/// - Lanza con Launch(dir) o dale velocity con Rigidbody2D.
-/// - Daño a Health y se destruye al impactar (configurable).
-/// - Se destruye en paredes/tilemap (Walls) para no atravesar el mapa.
-/// - NO usa lifetime por defecto (useLifetime = false).
+/// Proyectil genérico (único) para todo el juego.
+/// - fromPlayer = true  => daña EnemyHealth.
+/// - fromPlayer = false => daña PlayerHealth.
+/// - Soporta Trigger y Collision.
+/// - Filtro por damageLayers opcional (0 = ignora máscara y usa tipo de objetivo).
+/// - Destruye al chocar con paredes (TilemapCollider2D o layer "Walls").
 [RequireComponent(typeof(Collider2D))]
 public class Projectile2D : MonoBehaviour
 {
+    [Header("Propiedad")]
+    [SerializeField] private bool fromPlayer = true;
+
     [Header("Movimiento")]
     [SerializeField] private float speed = 16f;
-    [SerializeField] private bool faceVelocity = false; // si usas 1 prefab por dirección, déjalo en false
+    [SerializeField] private bool faceVelocity = false;
 
-    [Header("Tiempo de vida (opcional)")]
-    [SerializeField] private bool useLifetime = false;   // <--- OFF por defecto
+    [Header("Vida del proyectil (opcionales)")]
+    [SerializeField] private bool useLifetime = false;
     [SerializeField] private float lifetimeSeconds = 2.5f;
-
-    [Header("Distancia máxima (opcional)")]
     [SerializeField] private bool useMaxDistance = false;
     [SerializeField] private float maxDistance = 20f;
 
     [Header("Daño")]
     [SerializeField] private int damage = 1;
-    [SerializeField] private LayerMask damageLayers; // 0 = cualquiera
+    [SerializeField] private LayerMask damageLayers; // 0 => no filtra por layer (mejor para evitar confusiones)
     [SerializeField] private bool destroyOnHit = true;
 
     [Header("Paredes")]
-    [SerializeField] private string wallsLayerName = "Walls"; // cambia si usas otra
+    [SerializeField] private string wallsLayerName = "Walls";
 
     private Rigidbody2D rb;
     private Vector2 vel;
@@ -45,8 +47,7 @@ public class Projectile2D : MonoBehaviour
         {
             sr.enabled = true;
             var c = sr.color; if (c.a <= 0f) { c.a = 1f; sr.color = c; }
-            var t0 = sr.transform;
-            t0.position = new Vector3(t0.position.x, t0.position.y, 0f);
+            var p = sr.transform.position; sr.transform.position = new Vector3(p.x, p.y, 0f);
         }
 
         spawnPos = transform.position;
@@ -56,23 +57,19 @@ public class Projectile2D : MonoBehaviour
     {
         vel = dir.normalized * speed;
         if (rb) rb.linearVelocity = vel;
-        if (faceVelocity && vel.sqrMagnitude > 1e-4f)
-            transform.right = vel;
+        if (faceVelocity && vel.sqrMagnitude > 1e-4f) transform.right = vel;
     }
 
     void Update()
     {
-        // Si no hay RB2D, mover manual
         if (!rb) transform.position += (Vector3)(vel * Time.deltaTime);
 
-        // Lifetime (solo si está activado)
         if (useLifetime)
         {
             t += Time.deltaTime;
             if (t >= lifetimeSeconds) { Destroy(gameObject); return; }
         }
 
-        // Distancia máxima (solo si está activada)
         if (useMaxDistance)
         {
             if ((transform.position - spawnPos).sqrMagnitude >= maxDistance * maxDistance)
@@ -82,16 +79,14 @@ public class Projectile2D : MonoBehaviour
         }
     }
 
-    void OnTriggerEnter2D(Collider2D other)
-    {
-        TryHit(other.gameObject);
-    }
+    void OnTriggerEnter2D(Collider2D other) => TryHit(other.gameObject);
+    void OnCollisionEnter2D(Collision2D col) => TryHit(col.collider.gameObject);
 
     void TryHit(GameObject hit)
     {
         if (!hit) return;
 
-        // Paredes: TilemapCollider2D o layer Walls
+        // Paredes
         if (hit.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>() ||
             (!string.IsNullOrEmpty(wallsLayerName) && LayerMask.LayerToName(hit.layer) == wallsLayerName))
         {
@@ -99,13 +94,27 @@ public class Projectile2D : MonoBehaviour
             return;
         }
 
-        // Daño a Health
-        var hp = hit.GetComponent<Health>();
-        if (hp != null)
+        // Si damageLayers != 0, filtra; si es 0, ignora máscara y golpea por tipo
+        if (damageLayers.value != 0 && ((1 << hit.layer) & damageLayers.value) == 0)
         {
-            if (damageLayers.value == 0 || ((1 << hit.layer) & damageLayers.value) != 0)
+            return;
+        }
+
+        if (fromPlayer)
+        {
+            var eh = hit.GetComponent<EnemyHealth>() ?? hit.GetComponentInParent<EnemyHealth>();
+            if (eh != null)
             {
-                hp.Damage(damage);
+                eh.Damage(Mathf.Max(1, damage));
+                if (destroyOnHit) Destroy(gameObject);
+            }
+        }
+        else
+        {
+            var ph = hit.GetComponent<PlayerHealth>() ?? hit.GetComponentInParent<PlayerHealth>();
+            if (ph != null)
+            {
+                ph.Damage(Mathf.Max(1, damage));
                 if (destroyOnHit) Destroy(gameObject);
             }
         }

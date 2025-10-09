@@ -128,8 +128,9 @@ public class RoomRuntime : MonoBehaviour
         {
             if (builder.RoomBounds.Contains(e.transform.position))
             {
-                var hp = e.GetComponent<Health>();
-                if (hp) hp.Damage(99999); else Destroy(e.gameObject);
+                var hp = e.GetComponent<EnemyHealth>();
+                if (hp) hp.Damage(99999);
+                else Destroy(e.gameObject);
             }
         }
     }
@@ -544,8 +545,8 @@ public class RoomRuntime : MonoBehaviour
 
     void HookDeath(GameObject go)
     {
-        var hp = go.GetComponent<Health>();
-        if (hp != null) hp.OnDeath += OnActorDeath;
+        var eh = go.GetComponent<EnemyHealth>();
+        if (eh != null) eh.OnDeath += OnActorDeath;
     }
 
     void OnActorDeath()
@@ -567,8 +568,8 @@ public class RoomRuntime : MonoBehaviour
         foreach (var a in spawnedActors)
         {
             if (!a) continue;
-            var hp = a.GetComponent<Health>();
-            if (hp != null) hp.OnDeath -= OnActorDeath;
+            var eh = a.GetComponent<EnemyHealth>();
+            if (eh != null) eh.OnDeath -= OnActorDeath;
         }
         spawnedActors.Clear();
 

@@ -11,11 +11,11 @@ GameObject:
   - component: {fileID: 1872955035121110272}
   - component: {fileID: 8241628591650211932}
   - component: {fileID: 2990840471699002861}
-  - component: {fileID: 7260988861643817802}
   - component: {fileID: 2103551324408445694}
   - component: {fileID: 1701398981192419249}
   - component: {fileID: 8074739233009943929}
   - component: {fileID: -7297981129944044101}
+  - component: {fileID: 37261008365437858}
   m_Layer: 7
   m_Name: Enemy_Zombie
   m_TagString: Enemy
@@ -80,7 +80,7 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: -1482758893
-  m_SortingLayer: 6
+  m_SortingLayer: 9
   m_SortingOrder: 0
   m_Sprite: {fileID: -1538610437219240539, guid: 19f085e861b1fa5498f84ed53adc3dfe, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -120,22 +120,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!114 &7260988861643817802
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8731047138970188411}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9ca9200d836515448a1090a696750fa6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  maxHP: 3
-  currentHP: 3
-  destroyOnDeath: 1
-  invincible: 0
 --- !u!70 &2103551324408445694
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -199,8 +183,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed12b5622d32724ba542aac2bf5af60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  touchDamage: 1
-  cooldown: 0.5
+  filterMode: 0
+  playerTag: Player
+  playerLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  contactDamage: 1
 --- !u!114 &-7297981129944044101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -213,3 +201,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6b9d217f65dd5c4fbaf88eeb26baeb2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  color: {r: 1, g: 1, b: 1, a: 1}
+  fontSize: 32
+  sortingOrder: 100
+  worldOffset: {x: 0, y: 0.6, z: 0}
+  floatUpDistance: 0.8
+  duration: 0.6
+--- !u!114 &37261008365437858
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8731047138970188411}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a01ecec61eab1ce41a8381a07cd655ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHP: 3
+  currentHP: 3
+  allowInvulnerability: 0

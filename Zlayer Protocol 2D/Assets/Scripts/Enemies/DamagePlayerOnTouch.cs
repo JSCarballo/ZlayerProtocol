@@ -1,33 +1,47 @@
-using UnityEngine;
+﻿using UnityEngine;
 
+/// Daño de contacto SOLO al Player (soporta Trigger y Collision).
 [RequireComponent(typeof(Collider2D))]
 public class DamagePlayerOnTouch : MonoBehaviour
 {
-    public float touchDamage = 1f;
-    public float cooldown = 0.5f;
-    float cdTimer;
+    public enum FilterMode { ByTag, ByLayerMask, AnyPlayerHealth }
 
-    void Update() { if (cdTimer > 0) cdTimer -= Time.deltaTime; }
+    [Header("Filtro")]
+    public FilterMode filterMode = FilterMode.ByTag;
+    public string playerTag = "Player";
+    public LayerMask playerLayers;
 
-    void OnCollisionStay2D(Collision2D collision)
+    [Header("Daño")]
+    [Tooltip("Se redondea hacia arriba a entero.")]
+    public float contactDamage = 1f;
+
+    void Reset()
     {
-        TryDamage(collision.collider);
+        var col = GetComponent<Collider2D>();
+        if (col) col.isTrigger = true;
     }
-    void OnTriggerStay2D(Collider2D other)
+
+    void OnTriggerEnter2D(Collider2D other) => TryDamage(other.gameObject);
+    void OnCollisionEnter2D(Collision2D col) => TryDamage(col.collider.gameObject);
+
+    void TryDamage(GameObject other)
     {
-        TryDamage(other);
+        if (!IsValid(other)) return;
+
+        var hp = other.GetComponent<PlayerHealth>() ?? other.GetComponentInParent<PlayerHealth>();
+        if (!hp) return;
+
+        hp.Damage(Mathf.Max(1, Mathf.CeilToInt(contactDamage)));
     }
 
-    void TryDamage(Collider2D col)
+    bool IsValid(GameObject other)
     {
-        if (cdTimer > 0) return;
-        if (!col.CompareTag("Player")) return;
-
-        var hp = col.GetComponent<Health>();
-        if (hp != null)
+        switch (filterMode)
         {
-            hp.Damage(touchDamage);
-            cdTimer = cooldown;
+            case FilterMode.ByTag: return other.CompareTag(playerTag);
+            case FilterMode.ByLayerMask: return playerLayers.value == 0 || (playerLayers.value & (1 << other.layer)) != 0;
+            case FilterMode.AnyPlayerHealth: return other.GetComponent<PlayerHealth>() || other.GetComponentInParent<PlayerHealth>();
         }
+        return false;
     }
 }
