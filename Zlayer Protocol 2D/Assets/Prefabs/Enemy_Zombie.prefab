@@ -80,7 +80,7 @@ SpriteRenderer:
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: -1482758893
-  m_SortingLayer: 6
+  m_SortingLayer: 9
   m_SortingOrder: 0
   m_Sprite: {fileID: -1538610437219240539, guid: 19f085e861b1fa5498f84ed53adc3dfe, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -199,8 +199,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ed12b5622d32724ba542aac2bf5af60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  touchDamage: 1
-  cooldown: 0.5
+  damage: 1
+  useLayerFilter: 1
+  playerLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  useTagFilter: 1
+  requiredTag: PLayer
+  perTargetCooldown: 0.5
+  debugLogs: 1
 --- !u!114 &-7297981129944044101
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -213,3 +220,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6b9d217f65dd5c4fbaf88eeb26baeb2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  enabledForThis: 1
+  anchorOverride: {fileID: 0}
+  heightOffset: 0.25
+  useSpriteTop: 1
+  treatAsBoss: 0
+  bossTag: Boss
+  useBossStyle: 1

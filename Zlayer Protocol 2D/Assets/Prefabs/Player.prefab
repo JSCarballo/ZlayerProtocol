@@ -804,6 +804,9 @@ GameObject:
   - component: {fileID: 2821709140163126832}
   - component: {fileID: 4420135977492995065}
   - component: {fileID: 883042935630593155}
+  - component: {fileID: 4685453289176193346}
+  - component: {fileID: 5296852747580818282}
+  - component: {fileID: 5707561587750881274}
   m_Layer: 6
   m_Name: Player
   m_TagString: PLayer
@@ -1130,3 +1133,60 @@ MonoBehaviour:
   pixelsPerUnit: 40
   snapAimToCardinal: 1
   legsSpeedParam: 1
+--- !u!114 &4685453289176193346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ddb5c7c19c431544a9a18949681bb62, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  invulnSeconds: 1
+  blinker: {fileID: 5296852747580818282}
+--- !u!114 &5296852747580818282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d2f86f3e117e674ebe2eb95a8be56cd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  renderers:
+  - {fileID: 2287729406339978330}
+  - {fileID: 6233844267021241876}
+  - {fileID: 7701799879276832816}
+  - {fileID: 5800404981770162854}
+  autoCollectChildren: 1
+  excludeNameContains:
+  - Flash
+  blinkAlpha: 0.25
+  blinkHz: 12
+--- !u!114 &5707561587750881274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc2407c7c1abb204c806087217a57988, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultContactDamage: 1
+  useLayerFilter: 1
+  enemyLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  useTagFilter: 1
+  enemyTag: Enemy
+  perAttackerCooldown: 0.5
+  debugLogs: 1
