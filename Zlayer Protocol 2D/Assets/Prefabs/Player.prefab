@@ -795,8 +795,6 @@ GameObject:
   - component: {fileID: 2287729406339978330}
   - component: {fileID: 5845437246508241484}
   - component: {fileID: 7839456726129466727}
-  - component: {fileID: 1086106997084698451}
-  - component: {fileID: 8481124397783283141}
   - component: {fileID: 7730909980260266431}
   - component: {fileID: 2627890925218881014}
   - component: {fileID: -9107181851948685107}
@@ -955,39 +953,6 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0.045}
   m_Size: {x: 0.32, y: 0.64}
   m_Direction: 0
---- !u!114 &1086106997084698451
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9212037553653903690}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f633f4c8ee11244788d702c5d2dc7e8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  bulletPrefab: {fileID: 5128106100296778996, guid: f89eafc393911db459a7a81dcb4c52ba, type: 3}
-  baseDamage: 1
-  baseCooldown: 0.25
-  baseBulletSpeed: 8
-  upKey: 273
-  downKey: 274
-  leftKey: 276
-  rightKey: 275
---- !u!114 &8481124397783283141
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9212037553653903690}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a3bcba69eb24ba04ea918aed8341e106, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  moveSpeed: 5
 --- !u!114 &7730909980260266431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1017,8 +982,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   toDisableExplicit:
-  - {fileID: 1086106997084698451}
-  - {fileID: 8481124397783283141}
+  - {fileID: 0}
+  - {fileID: 0}
   nameKeywords:
   - move
   - movement
