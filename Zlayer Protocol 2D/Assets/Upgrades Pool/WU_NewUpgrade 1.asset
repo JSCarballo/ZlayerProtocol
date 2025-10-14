@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
   m_Name: WU_NewUpgrade 1
   m_EditorClassIdentifier: 
-  id: UP_FIRERATE_25
   displayName: Rapid Receiver
   description: 'Cadencia +25%
 
@@ -25,8 +24,12 @@ MonoBehaviour:
 
     unique = true, weight = 1.0'
   icon: {fileID: 0}
-  upgrade:
-    type: 1
-    amount: 1.25
-  unique: 1
-  weight: 1
+  addDamage: 0
+  addFireRate: 0
+  addBulletSpeed: 0
+  addMaxBounces: 0
+  mulDamage: 1
+  mulFireRate: 2.5
+  mulBulletSpeed: 1
+  enablePiercing: 0
+  enableBouncing: 0

@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
   m_Name: WU_NewUpgrade 5
   m_EditorClassIdentifier: 
-  id: UP_BOUNCE
   displayName: Ricochet Coating
   description: 'Bounce
 
@@ -25,8 +24,12 @@ MonoBehaviour:
 
     unique = true, weight = 0.6'
   icon: {fileID: 0}
-  upgrade:
-    type: 5
-    amount: 1
-  unique: 1
-  weight: 0.6
+  addDamage: 0
+  addFireRate: 0
+  addBulletSpeed: 0
+  addMaxBounces: 0
+  mulDamage: 1
+  mulFireRate: 1
+  mulBulletSpeed: 1
+  enablePiercing: 0
+  enableBouncing: 1

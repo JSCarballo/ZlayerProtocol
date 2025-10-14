@@ -148,14 +148,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7315eae6f0962a147a2b1d9d7184a6d2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerTag: Player
+  playerLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  useScriptable: 1
+  upgradeSO: {fileID: 0}
   usePoolOnSpawn: 1
-  assignedUpgrade: {fileID: 0}
-  iconRenderer: {fileID: 0}
-  displayName: 
-  description: 
-  destroyOnPickup: 1
-  sfx: {fileID: 0}
-  vfxPrefab: {fileID: 0}
+  pickupVFX: {fileID: 0}
+  pickupSFX: {fileID: 0}
+  destroyDelay: 0.05
+  debugLogs: 0
+  consumed: 0
 --- !u!114 &7081671289835562115
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -168,6 +172,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9fa0a74631f14f4a9d03846dcd17488, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  showRadius: 1.6
-  overrideTitle: 
-  overrideDesc: 
+  playerTag: Player
+  activateDistance: 2
+  useBob: 1
+  bobAmplitude: 0.06
+  bobSpeed: 3
+  useScale: 1
+  farScale: 1
+  nearScale: 1.15
+  scaleLerp: 10

@@ -1,43 +1,45 @@
 using UnityEngine;
+using System;
 
-/// Bala 2D SIN autodestruirse por tiempo (a menos que lo habilites).
-/// - Lanza con Launch(dir) o dale velocity con Rigidbody2D.
-/// - Daño a Health y se destruye al impactar (configurable).
-/// - Se destruye en paredes/tilemap (Walls) para no atravesar el mapa.
-/// - NO usa lifetime por defecto (useLifetime = false).
+/// Proyectil 2D que recibe stats del arma y aplica daño al impactar.
+/// - Llama a SetStats(...) o ConfigureFromStats(PlayerWeaponStats) antes de Launch.
+/// - Launch(dir [, speedOverride]) mueve la bala.
+/// - Rebota si 'bouncing' con 'maxBounces' > 0; si no, se destruye en paredes.
+/// - Daño a Health con Damage(float) o Damage(int) si existen.
+/// - "Walls" se detecta por nombre de capa o por TilemapCollider2D.
 [RequireComponent(typeof(Collider2D))]
 public class Projectile2D : MonoBehaviour
 {
     [Header("Movimiento")]
-    [SerializeField] private float speed = 16f;
-    [SerializeField] private bool faceVelocity = false; // si usas 1 prefab por dirección, déjalo en false
+    [SerializeField] private float speed = 12f;
+    [SerializeField] private bool faceVelocity = false;
 
-    [Header("Tiempo de vida (opcional)")]
-    [SerializeField] private bool useLifetime = false;   // <--- OFF por defecto
-    [SerializeField] private float lifetimeSeconds = 2.5f;
-
-    [Header("Distancia máxima (opcional)")]
-    [SerializeField] private bool useMaxDistance = false;
-    [SerializeField] private float maxDistance = 20f;
-
-    [Header("Daño")]
-    [SerializeField] private int damage = 1;
-    [SerializeField] private LayerMask damageLayers; // 0 = cualquiera
-    [SerializeField] private bool destroyOnHit = true;
+    [Header("Vida (opcional)")]
+    [SerializeField] private bool useLifetime = false;
+    [SerializeField] private float lifetimeSeconds = 3f;
 
     [Header("Paredes")]
-    [SerializeField] private string wallsLayerName = "Walls"; // cambia si usas otra
+    [SerializeField] private string wallsLayerName = "Walls";
+
+    [Header("Daño / Comportamiento")]
+    [Tooltip("Daño base si no se configura por SetStats/ConfigureFromStats.")]
+    public float damage = 1f;
+    public bool piercing = false;
+    public bool bouncing = false;
+    public int maxBounces = 0;
 
     private Rigidbody2D rb;
     private Vector2 vel;
-    private float t;
-    private Vector3 spawnPos;
+    private float tLife;
+    private int bouncesLeft;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         var col = GetComponent<Collider2D>();
-        col.isTrigger = true;
+        if (col) col.isTrigger = true;
+
+        bouncesLeft = maxBounces;
 
         // Garantizar visibilidad
         var sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
@@ -45,15 +47,33 @@ public class Projectile2D : MonoBehaviour
         {
             sr.enabled = true;
             var c = sr.color; if (c.a <= 0f) { c.a = 1f; sr.color = c; }
-            var t0 = sr.transform;
-            t0.position = new Vector3(t0.position.x, t0.position.y, 0f);
+            var t0 = sr.transform; t0.position = new Vector3(t0.position.x, t0.position.y, 0f);
         }
-
-        spawnPos = transform.position;
     }
 
-    public void Launch(Vector2 dir)
+    // ====== API de stats ======
+    public void SetStats(float dmg, bool prc, bool bnc, int maxB)
     {
+        damage = dmg;
+        piercing = prc;
+        bouncing = bnc;
+        maxBounces = Mathf.Max(0, maxB);
+        bouncesLeft = maxBounces;
+    }
+
+    /// Compatibilidad con flujos previos.
+    public void ConfigureFromStats(PlayerWeaponStats stats)
+    {
+        if (!stats) return;
+        SetStats(stats.damage, stats.piercing, stats.bouncing, stats.maxBounces);
+    }
+
+    // ====== Movimiento ======
+    public void Launch(Vector2 dir) => Launch(dir, -1f);
+
+    public void Launch(Vector2 dir, float speedOverride)
+    {
+        if (speedOverride > 0f) speed = speedOverride;
         vel = dir.normalized * speed;
         if (rb) rb.linearVelocity = vel;
         if (faceVelocity && vel.sqrMagnitude > 1e-4f)
@@ -62,52 +82,59 @@ public class Projectile2D : MonoBehaviour
 
     void Update()
     {
-        // Si no hay RB2D, mover manual
         if (!rb) transform.position += (Vector3)(vel * Time.deltaTime);
 
-        // Lifetime (solo si está activado)
         if (useLifetime)
         {
-            t += Time.deltaTime;
-            if (t >= lifetimeSeconds) { Destroy(gameObject); return; }
-        }
-
-        // Distancia máxima (solo si está activada)
-        if (useMaxDistance)
-        {
-            if ((transform.position - spawnPos).sqrMagnitude >= maxDistance * maxDistance)
-            {
-                Destroy(gameObject); return;
-            }
+            tLife += Time.deltaTime;
+            if (tLife >= lifetimeSeconds) { Destroy(gameObject); return; }
         }
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        TryHit(other.gameObject);
-    }
-
-    void TryHit(GameObject hit)
-    {
+        var hit = other.gameObject;
         if (!hit) return;
 
-        // Paredes: TilemapCollider2D o layer Walls
-        if (hit.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>() ||
-            (!string.IsNullOrEmpty(wallsLayerName) && LayerMask.LayerToName(hit.layer) == wallsLayerName))
+        // Paredes o tilemap
+        bool isWallLayer = !string.IsNullOrEmpty(wallsLayerName) && LayerMask.LayerToName(hit.layer) == wallsLayerName;
+        bool isTilemap = hit.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>();
+
+        if (isWallLayer || isTilemap)
         {
+            if (bouncing && bouncesLeft > 0)
+            {
+                bouncesLeft--;
+                vel = -vel;
+                if (rb) rb.linearVelocity = vel;
+                return;
+            }
             Destroy(gameObject);
             return;
         }
 
-        // Daño a Health
-        var hp = hit.GetComponent<Health>();
-        if (hp != null)
+        // Daño a Health (objeto o su padre)
+        var hp = hit.GetComponent<Health>() ?? hit.GetComponentInParent<Health>();
+        if (hp)
         {
-            if (damageLayers.value == 0 || ((1 << hit.layer) & damageLayers.value) != 0)
-            {
-                hp.Damage(damage);
-                if (destroyOnHit) Destroy(gameObject);
-            }
+            DealDamage(hp, damage);
+            if (!piercing) Destroy(gameObject);
         }
+    }
+
+    void DealDamage(Health hp, float dmg)
+    {
+        if (!hp) return;
+        var t = hp.GetType();
+
+        // Damage(float)
+        var mFloat = t.GetMethod("Damage", new Type[] { typeof(float) });
+        if (mFloat != null) { mFloat.Invoke(hp, new object[] { dmg }); return; }
+
+        // Damage(int)
+        var mInt = t.GetMethod("Damage", new Type[] { typeof(int) });
+        if (mInt != null) { mInt.Invoke(hp, new object[] { Mathf.RoundToInt(dmg) }); return; }
+
+        // Si no existe Damage, no hacemos nada.
     }
 }

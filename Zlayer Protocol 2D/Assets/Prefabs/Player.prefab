@@ -805,6 +805,7 @@ GameObject:
   - component: {fileID: 4685453289176193346}
   - component: {fileID: 5296852747580818282}
   - component: {fileID: 5707561587750881274}
+  - component: {fileID: 802531999313550184}
   m_Layer: 6
   m_Name: Player
   m_TagString: PLayer
@@ -1043,6 +1044,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20b23601d2eeea444a9c968157e6bc6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  weaponStats: {fileID: 0}
   bulletPrefab: {fileID: 0}
   bulletPrefabRight: {fileID: 7221209315192998083, guid: f997f504e0e4e174a8dd864fc120ee02, type: 3}
   bulletPrefabLeft: {fileID: 5584961044401737389, guid: 4b9f100046d2bb941874e558d57951e3, type: 3}
@@ -1053,14 +1055,12 @@ MonoBehaviour:
   muzzleUp: {fileID: 3084760438507682601}
   muzzleDown: {fileID: 7591025548427261813}
   muzzleFlash: {fileID: 1335814694668868282}
-  fireRate: 6
-  defaultBulletSpeed: 8
-  fireOnHold: 1
   spawnOffset: {x: 0, y: 0}
   pixelSnapSpawn: 1
   pixelsPerUnit: 40
   bulletSortingLayer: 
   bulletOrderInLayer: 10
+  fireWhileHolding: 1
 --- !u!114 &4420135977492995065
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1155,3 +1155,21 @@ MonoBehaviour:
   enemyTag: Enemy
   perAttackerCooldown: 0.5
   debugLogs: 1
+--- !u!114 &802531999313550184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ad3ed7da9d50c747b74fc9b1d36da4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  damage: 1
+  fireRate: 3
+  bulletSpeed: 12
+  piercing: 0
+  bouncing: 0
+  maxBounces: 0

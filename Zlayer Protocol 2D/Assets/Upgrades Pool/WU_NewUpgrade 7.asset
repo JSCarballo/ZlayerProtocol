@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
   m_Name: WU_NewUpgrade 7
   m_EditorClassIdentifier: 
-  id: UP_FIRERATE_50
   displayName: Experimental Trigger
   description: 'Cadencia +50% (raro)
 
@@ -26,8 +25,12 @@ MonoBehaviour:
     unique = true, weight =
     0.3'
   icon: {fileID: 0}
-  upgrade:
-    type: 1
-    amount: 1.5
-  unique: 1
-  weight: 0.3
+  addDamage: 0
+  addFireRate: 0
+  addBulletSpeed: 0
+  addMaxBounces: 0
+  mulDamage: 1
+  mulFireRate: 5
+  mulBulletSpeed: 1
+  enablePiercing: 0
+  enableBouncing: 0

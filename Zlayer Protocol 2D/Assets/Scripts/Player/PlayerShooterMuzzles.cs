@@ -1,12 +1,16 @@
 using UnityEngine;
 
-/// Dispara usando 4 muzzles y 4 prefabs (uno por dirección).
-/// - Corrige taps: usa SIEMPRE la última flecha presionada ESTE frame.
-/// - Garantiza visibilidad de la bala: z=0, SR enabled, sorting layer/orden configurables.
-/// - Pixel-snap del spawn para PPU=40 (opcional).
+/// Shooter 4 direcciones que usa PlayerWeaponStats y dispara desde muzzles.
+/// - Cooldown = 1 / fireRate
+/// - Soporta hold o solo tap (configurable)
+/// - Pixel-snap del spawn y MuzzleFlash opcional
+/// - Copia layer/order del Player si no indicas uno para las balas
 [RequireComponent(typeof(Collider2D))]
 public class PlayerShooterMuzzles : MonoBehaviour
 {
+    [Header("Stats (arma)")]
+    [SerializeField] private PlayerWeaponStats weaponStats;
+
     [Header("Prefabs (fallback + por dirección)")]
     [SerializeField] private GameObject bulletPrefab;       // fallback si faltan los de abajo
     [SerializeField] private GameObject bulletPrefabRight;
@@ -23,40 +27,32 @@ public class PlayerShooterMuzzles : MonoBehaviour
     [Header("Muzzle Flash (opcional)")]
     [SerializeField] private MuzzleFlash2D muzzleFlash;
 
-    [Header("Disparo")]
-    [SerializeField, Tooltip("Balas/seg cuando mantienes flechas")]
-    private float fireRate = 6f;
-    [SerializeField, Tooltip("Velocidad si el prefab no usa Projectile2D")]
-    private float defaultBulletSpeed = 16f;
-    [SerializeField, Tooltip("Si ON, dispara al mantener; si OFF, solo con tap")]
-    private bool fireOnHold = true;
-
     [Header("Spawn")]
     [SerializeField] private Vector2 spawnOffset = Vector2.zero;
     [SerializeField] private bool pixelSnapSpawn = true;
     [SerializeField] private float pixelsPerUnit = 40f;
 
     [Header("Render de la bala (auto)")]
-    [SerializeField] private string bulletSortingLayer = ""; // si vacío, usa la capa del SR con mayor order en el Player
-    [SerializeField] private int bulletOrderInLayer = 10; // 10 por defecto para estar por encima de Torso (1/2)
+    [SerializeField] private string bulletSortingLayer = ""; // si vacío, copia del Player
+    [SerializeField] private int bulletOrderInLayer = 10;
 
-    private PlayerAim4Dir aimProvider;
-    private PlayerAnim2D animSync;
+    [Header("Input")]
+    [SerializeField] private bool fireWhileHolding = true; // true: mantener, false: solo tap
+
     private Collider2D ownerCol;
     private float fireCooldown;
     private Vector2 lastPressedAimDir = Vector2.right;
 
-    // Defaults detectados del Player (para copiar a las balas si bulletSortingLayer está vacío)
+    // layer/name detectados del Player para copiar a las balas si bulletSortingLayer vacío
     private string detectedLayerName = "Default";
     private int detectedMaxOrder = 0;
 
     void Awake()
     {
-        aimProvider = GetComponent<PlayerAim4Dir>();
-        animSync = GetComponent<PlayerAnim2D>();
+        if (!weaponStats) weaponStats = GetComponentInParent<PlayerWeaponStats>();
         ownerCol = GetComponent<Collider2D>();
 
-        // Detectar la sorting layer y el mayor order del Player (Torso/Legs/Flash)
+        // Detectar sorting layer / order del Player
         var srs = GetComponentsInChildren<SpriteRenderer>(true);
         foreach (var sr in srs)
         {
@@ -66,12 +62,8 @@ public class PlayerShooterMuzzles : MonoBehaviour
                 detectedLayerName = sr.sortingLayerName;
             }
         }
-
         if (string.IsNullOrEmpty(bulletSortingLayer))
-        {
             bulletSortingLayer = detectedLayerName;
-            // si no setean un order, deja bulletOrderInLayer como está (10) para sobresalir
-        }
 
         if (!muzzleRight || !muzzleLeft || !muzzleUp || !muzzleDown)
             Debug.LogWarning("[PlayerShooterMuzzles] Asigna los 4 muzzles en el inspector.");
@@ -81,6 +73,7 @@ public class PlayerShooterMuzzles : MonoBehaviour
 
     void Update()
     {
+        float rof = weaponStats ? Mathf.Max(0.05f, weaponStats.fireRate) : 6f;
         fireCooldown -= Time.deltaTime;
 
         bool pressed = Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.LeftArrow) ||
@@ -89,47 +82,31 @@ public class PlayerShooterMuzzles : MonoBehaviour
         bool holding = Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.LeftArrow) ||
                        Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow);
 
-        bool wantsFire = fireOnHold ? holding : pressed;
+        bool wantsFire = fireWhileHolding ? holding : pressed;
         if (!wantsFire || fireCooldown > 0f) return;
 
-        // Dirección de disparo *inmediata* este frame (corrige taps)
         Vector2 dir = DetermineAimDirImmediate();
         if (dir == Vector2.zero) return;
 
-        // Forzar torso a esa dir este mismo frame (coherencia visual)
-        if (animSync) animSync.SetAimInstant(dir);
-
-        // Fogonazo correcto
+        // Flash opcional
         if (muzzleFlash) muzzleFlash.Show(dir);
 
-        // Disparo
         Fire(dir);
-        fireCooldown = 1f / Mathf.Max(0.01f, fireRate);
+        fireCooldown = 1f / rof;
     }
 
     Vector2 DetermineAimDirImmediate()
     {
-        // Prioridad: tecla presionada ESTE frame
         if (Input.GetKeyDown(KeyCode.RightArrow)) { lastPressedAimDir = Vector2.right; return lastPressedAimDir; }
         if (Input.GetKeyDown(KeyCode.LeftArrow)) { lastPressedAimDir = Vector2.left; return lastPressedAimDir; }
         if (Input.GetKeyDown(KeyCode.UpArrow)) { lastPressedAimDir = Vector2.up; return lastPressedAimDir; }
         if (Input.GetKeyDown(KeyCode.DownArrow)) { lastPressedAimDir = Vector2.down; return lastPressedAimDir; }
 
-        // Si estamos en modo hold, usa la tecla mantenida
-        if (fireOnHold)
-        {
-            if (Input.GetKey(KeyCode.RightArrow)) { lastPressedAimDir = Vector2.right; return lastPressedAimDir; }
-            if (Input.GetKey(KeyCode.LeftArrow)) { lastPressedAimDir = Vector2.left; return lastPressedAimDir; }
-            if (Input.GetKey(KeyCode.UpArrow)) { lastPressedAimDir = Vector2.up; return lastPressedAimDir; }
-            if (Input.GetKey(KeyCode.DownArrow)) { lastPressedAimDir = Vector2.down; return lastPressedAimDir; }
-        }
+        if (Input.GetKey(KeyCode.RightArrow)) { lastPressedAimDir = Vector2.right; return lastPressedAimDir; }
+        if (Input.GetKey(KeyCode.LeftArrow)) { lastPressedAimDir = Vector2.left; return lastPressedAimDir; }
+        if (Input.GetKey(KeyCode.UpArrow)) { lastPressedAimDir = Vector2.up; return lastPressedAimDir; }
+        if (Input.GetKey(KeyCode.DownArrow)) { lastPressedAimDir = Vector2.down; return lastPressedAimDir; }
 
-        // Fallback: proveedor de aim o última válida
-        if (aimProvider != null)
-        {
-            Vector2 a = aimProvider.GetAimDir();
-            if (a != Vector2.zero) { lastPressedAimDir = a; return a; }
-        }
         return lastPressedAimDir;
     }
 
@@ -145,52 +122,56 @@ public class PlayerShooterMuzzles : MonoBehaviour
             spawnPos.x = Mathf.Round(spawnPos.x * pixelsPerUnit) / pixelsPerUnit;
             spawnPos.y = Mathf.Round(spawnPos.y * pixelsPerUnit) / pixelsPerUnit;
         }
-        spawnPos.z = 0f; // asegura render en 2D
+        spawnPos.z = 0f;
 
         GameObject b = Instantiate(prefab, spawnPos, Quaternion.identity);
-        b.transform.localScale = Vector3.one; // evita escalas raras heredadas
+        b.transform.localScale = Vector3.one;
 
         // Ignorar colisión con el Player
         var bCol = b.GetComponent<Collider2D>();
         if (ownerCol && bCol) Physics2D.IgnoreCollision(ownerCol, bCol, true);
 
-        // Garantizar visibilidad de la bala
         EnsureBulletVisible(b);
 
-        // Empuje
+        // Aplicar stats del arma a la bala
+        ApplyStatsToBullet(b, dir);
+    }
+
+    void ApplyStatsToBullet(GameObject b, Vector2 dir)
+    {
+        float bulletSpeed = weaponStats ? weaponStats.bulletSpeed : 16f;
+
         var proj = b.GetComponent<Projectile2D>();
-        if (proj) proj.Launch(dir);
+        if (proj)
+        {
+            float dmg = weaponStats ? weaponStats.damage : proj.damage;
+            bool prc = weaponStats ? weaponStats.piercing : proj.piercing;
+            bool bnc = weaponStats ? weaponStats.bouncing : proj.bouncing;
+            int mb = weaponStats ? weaponStats.maxBounces : proj.maxBounces;
+
+            proj.SetStats(dmg, prc, bnc, mb);
+            proj.Launch(dir, bulletSpeed);
+        }
         else
         {
+            // Prefab sin Projectile2D: empuje directo por RB si existe
             var rb = b.GetComponent<Rigidbody2D>();
-            if (rb) rb.linearVelocity = dir.normalized * defaultBulletSpeed;
+            if (rb) rb.linearVelocity = dir.normalized * bulletSpeed;
         }
     }
 
     void EnsureBulletVisible(GameObject b)
     {
-        // Busca SpriteRenderer en el objeto o hijos
-        var sr = b.GetComponent<SpriteRenderer>();
-        if (!sr) sr = b.GetComponentInChildren<SpriteRenderer>();
+        var sr = b.GetComponent<SpriteRenderer>() ?? b.GetComponentInChildren<SpriteRenderer>();
+        if (!sr) return;
 
-        if (!sr)
-        {
-            Debug.LogWarning("[PlayerShooterMuzzles] La bala instanciada no tiene SpriteRenderer. Asigna uno al prefab.");
-            return;
-        }
-
-        // Habilitar, capa de dibujo y orden
         sr.enabled = true;
         if (!string.IsNullOrEmpty(bulletSortingLayer))
             sr.sortingLayerName = bulletSortingLayer;
         sr.sortingOrder = bulletOrderInLayer;
 
-        // Asegurar alpha visible
-        var c = sr.color;
-        c.a = Mathf.Clamp01(c.a <= 0f ? 1f : c.a);
-        sr.color = c;
+        var c = sr.color; c.a = Mathf.Clamp01(c.a <= 0f ? 1f : c.a); sr.color = c;
 
-        // Z a 0 en el renderer por si el prefab trae offset
         var t = sr.transform;
         t.position = new Vector3(t.position.x, t.position.y, 0f);
     }

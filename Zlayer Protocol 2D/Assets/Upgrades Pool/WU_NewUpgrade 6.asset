@@ -12,14 +12,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
   m_Name: WU_NewUpgrade 6
   m_EditorClassIdentifier: 
-  id: UP_SPREAD_10
   displayName: Shattered Choke
-  description: "Spread +10\xB0 (abre abanico \u2192 \xFAtil con multi-proyectil)\nid:
-    UP_SPREAD_10\ndisplayName: Shattered Choke\nupgrade: SpreadAdd, amount = 10f\nunique
-    = true, weight = 0.6"
+  description: 'Velocidad de bala +40%
+
+    id: UP_BULLETSPEED_40
+
+    displayName:
+    Shattered Choke
+
+    upgrade: SpeedMult, amount = 1.2
+
+    unique = true, weight
+    = 0.8'
   icon: {fileID: 0}
-  upgrade:
-    type: 6
-    amount: 10
-  unique: 1
-  weight: 0.6
+  addDamage: 0
+  addFireRate: 0
+  addBulletSpeed: 0
+  addMaxBounces: 0
+  mulDamage: 1
+  mulFireRate: 1
+  mulBulletSpeed: 4
+  enablePiercing: 0
+  enableBouncing: 0

@@ -1,20 +1,27 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-[CreateAssetMenu(menuName = "ZLayer/Weapon Upgrade", fileName = "WU_NewUpgrade")]
+/// ScriptableObject de mejora de arma.
+/// Crea instancias: Right click > Create > ZLayer/Weapon Upgrade
+[CreateAssetMenu(menuName = "ZLayer/Weapon Upgrade", fileName = "WPN_Upgrade")]
 public class WeaponUpgradeSO : ScriptableObject
 {
-    [Header("Identidad (única)")]
-    public string id = "UP_XXXX";     // único en la pool (ej: UP_DMG_20)
+    [Header("Meta")]
     public string displayName = "Upgrade";
-    [TextArea] public string description;
-
-    [Header("Visual")]
+    [TextArea(2, 4)] public string description = "";
     public Sprite icon;
 
-    [Header("Definición de mejora")]
-    public WeaponUpgrade upgrade;
+    [Header("Aditivo")]
+    public float addDamage = 0f;
+    public float addFireRate = 0f;     // +disparos/seg
+    public float addBulletSpeed = 0f;
+    public int addMaxBounces = 0;
 
-    [Header("Selección")]
-    public bool unique = true;        // si true, NO puede repetirse en la run
-    public float weight = 1f;         // peso para aleatoriedad; >1 más probable
+    [Header("Multiplicador (x)")]
+    [Min(0f)] public float mulDamage = 1f;
+    [Min(0f)] public float mulFireRate = 1f;
+    [Min(0f)] public float mulBulletSpeed = 1f;
+
+    [Header("Flags")]
+    public bool enablePiercing = false;
+    public bool enableBouncing = false;
 }

@@ -12,21 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 70fc59af229b2b94f8cf0c90f7be73ea, type: 3}
   m_Name: WU_NewUpgrade 3
   m_EditorClassIdentifier: 
-  id: UP_EXTRA_1
-  displayName: Dual Feed
-  description: '+1 Proyectil
+  displayName: Dual Shock
+  description: 'DMG +40%
 
-    id: UP_EXTRA_1
+    id: UP_DMG_40
 
-    displayName: Dual Feed
+    displayName: Dual Shock
 
     upgrade:
-    ExtraProjectiles, amount = 1
+    DamageMult, amount = 1.4
 
     unique = true, weight = 0.9'
   icon: {fileID: 0}
-  upgrade:
-    type: 3
-    amount: 1
-  unique: 1
-  weight: 0.9
+  addDamage: 0
+  addFireRate: 0
+  addBulletSpeed: 0
+  addMaxBounces: 0
+  mulDamage: 4
+  mulFireRate: 1
+  mulBulletSpeed: 1
+  enablePiercing: 0
+  enableBouncing: 0
