@@ -5,6 +5,12 @@ using System.Collections.Generic;
 [RequireComponent(typeof(BoxCollider2D))]
 public class RoomRuntime : MonoBehaviour
 {
+    // ---------- Foco inicial de cámara por piso ----------
+    static bool s_InitialFocusDone = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void ResetInitialFocusFlag() => s_InitialFocusDone = false;
+
     [Header("Spawning (enemigos)")]
     public GameObject enemyPrefab;
     public int minEnemies = 3, maxEnemies = 6;
@@ -80,10 +86,9 @@ public class RoomRuntime : MonoBehaviour
     readonly List<GameObject> spawnedDoors = new();
 
     // Armory runtime
-    readonly List<WeaponUpgradePickup> currentArmoryPickups = new();
+    readonly List<WeaponUpgradePickup> currentArmoryChoices = new();
     float armoryChoicesTimer = 0f;
     bool armoryChoiceResolved = false;
-    bool armorySubscribed = false;
 
     // Arena runtime
     bool arenaActive = false;
@@ -98,8 +103,6 @@ public class RoomRuntime : MonoBehaviour
         if (camCurve == null) camCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
         EnsureTriggerCollider();
     }
-
-    void OnDestroy() => UnsubscribeArmory();
 
     void OnValidate()
     {
@@ -121,18 +124,46 @@ public class RoomRuntime : MonoBehaviour
         triggerCol.size = b.size;
     }
 
+    void Start()
+    {
+        // --- Foco inicial de cámara tras cargar piso ---
+        StartCoroutine(InitialAutoFocusIfPlayerInside());
+    }
+
+    System.Collections.IEnumerator InitialAutoFocusIfPlayerInside()
+    {
+        if (s_InitialFocusDone) yield break;
+        yield return null; // 1 frame para asegurar spawn de Player y generación
+
+        var player = GameObject.FindGameObjectWithTag("Player");
+        if (!player) yield break;
+
+        Vector3 p = player.transform.position;
+        if (!builder.RoomBounds.Contains(p)) yield break;
+
+        if (CameraRoomLock.Instance)
+            CameraRoomLock.Instance.SnapToRoom(builder.RoomBounds);
+
+        visited = true;
+        DungeonMapRegistry.Instance?.NotifyPlayerEnteredRoom(gridCell);
+        DungeonMapRegistry.Instance?.SetVisited(gridCell);
+
+        s_InitialFocusDone = true;
+    }
+
     public void MarkAsStartRoom()
     {
         isStartRoom = true;
         visited = true;
 
-        var enemies = UnityEngine.Object.FindObjectsByType<EnemyChaseAI>(FindObjectsSortMode.None);
+        var enemies = Object.FindObjectsByType<EnemyChaseAI>(FindObjectsSortMode.None);
         foreach (var e in enemies)
         {
             if (builder.RoomBounds.Contains(e.transform.position))
             {
                 var hp = e.GetComponent<Health>();
-                if (hp) hp.Damage(99999); else Destroy(e.gameObject);
+                if (hp) hp.Damage(99999);
+                else Destroy(e.gameObject);
             }
         }
     }
@@ -153,7 +184,7 @@ public class RoomRuntime : MonoBehaviour
 
     void Update()
     {
-        if (isArmoryRoom && currentArmoryPickups.Count > 0 && !armoryChoiceResolved && armoryChoiceLifetime < 9999f)
+        if (isArmoryRoom && currentArmoryChoices.Count > 0 && !armoryChoiceResolved && armoryChoiceLifetime < 9999f)
         {
             armoryChoicesTimer += Time.deltaTime;
             if (armoryChoicesTimer >= armoryChoiceLifetime)
@@ -167,8 +198,11 @@ public class RoomRuntime : MonoBehaviour
 
         DungeonMapRegistry.Instance?.NotifyPlayerEnteredRoom(gridCell);
 
+        // 1B (follow activo): solo Snap para clamp correcto
         if (CameraRoomLock.Instance && CameraRoomLock.Instance.IsFollowActive)
+        {
             CameraRoomLock.Instance.SnapToRoom(builder.RoomBounds);
+        }
         else
         {
             if (enableCamTransition && CameraRoomLock.Instance)
@@ -192,15 +226,11 @@ public class RoomRuntime : MonoBehaviour
 
         bool firstVisit = !visited;
 
-        // Armory
+        // Armory (primera vez)
         if (firstVisit && isArmoryRoom && upgradePickupPrefab)
         {
             if (armoryChoicesUsePool) SpawnArmoryChoices();
-            else
-            {
-                SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset, fromBoss: false);
-                upgradeSpawned = true;
-            }
+            else { SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset); upgradeSpawned = true; }
         }
 
         // Arena 1B
@@ -214,10 +244,8 @@ public class RoomRuntime : MonoBehaviour
         }
         else
         {
-            // Encuentro normal/boss (primera visita y no Armory)
-            int count = (firstVisit && !isArmoryRoom)
-                ? (isBossRoom ? 1 : UnityEngine.Random.Range(minEnemies, maxEnemies + 1))
-                : 0;
+            // Encuentro normal/boss (solo primera visita y si no es Armory)
+            int count = (firstVisit && !isArmoryRoom) ? (isBossRoom ? 1 : UnityEngine.Random.Range(minEnemies, maxEnemies + 1)) : 0;
 
             List<Bounds> exclusionZones = new();
             if (firstVisit && count > 0 && useEntrySafeZone)
@@ -296,14 +324,19 @@ public class RoomRuntime : MonoBehaviour
     void SpawnArmoryChoices()
     {
         ClearArmoryChoices(null, false);
+        currentArmoryChoices.Clear();
         armoryChoiceResolved = false;
         armoryChoicesTimer = 0f;
-        currentArmoryPickups.Clear();
 
-        List<WeaponUpgradeSO> candidates;
-        if (!UpgradePoolManager.Instance || !UpgradePoolManager.Instance.SampleCandidates(armoryChoices, out candidates) || candidates.Count == 0)
+        if (!UpgradePoolManager.Instance)
         {
-            SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset, fromBoss: false);
+            SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset);
+            return;
+        }
+
+        if (!UpgradePoolManager.Instance.SampleCandidates(armoryChoices, out var candidates))
+        {
+            SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset);
             return;
         }
 
@@ -317,52 +350,41 @@ public class RoomRuntime : MonoBehaviour
             Vector3 pos = center + new Vector3(x, 0f, 0f);
 
             var go = Instantiate(upgradePickupPrefab, pos, Quaternion.identity);
-            var pick = go.GetComponent<WeaponUpgradePickup>() ?? go.AddComponent<WeaponUpgradePickup>();
-            pick.useScriptable = true;
-            pick.Assign(candidates[i]);
+            var p = go.GetComponent<WeaponUpgradePickup>();
+            if (!p) continue;
 
-            currentArmoryPickups.Add(pick);
+            p.useScriptable = true;
+            p.Assign(candidates[i]);
+
+            p.onPicked += (so) =>
+            {
+                if (armoryChoiceResolved) return;
+                armoryChoiceResolved = true;
+
+                // FIX: castear ScriptableObject -> WeaponUpgradeSO para MarkUsed
+                if (UpgradePoolManager.Instance && so != null)
+                {
+                    var wso = so as WeaponUpgradeSO;
+                    if (wso != null)
+                        UpgradePoolManager.Instance.MarkUsed(wso);
+                }
+
+                ClearArmoryChoices(p, true);
+            };
+
+            currentArmoryChoices.Add(p);
         }
-
-        SubscribeArmory();
     }
 
     void ClearArmoryChoices(WeaponUpgradePickup chosen, bool consumeSelected)
     {
-        foreach (var p in currentArmoryPickups)
+        foreach (var p in currentArmoryChoices)
         {
             if (!p) continue;
             if (chosen != null && p == chosen) continue;
-            if (p.gameObject) Destroy(p.gameObject);
+            Destroy(p.gameObject);
         }
-        currentArmoryPickups.Clear();
-        UnsubscribeArmory();
-    }
-
-    void SubscribeArmory()
-    {
-        if (armorySubscribed) return;
-        WeaponUpgradePickup.AnyPicked += HandleAnyPickup;
-        armorySubscribed = true;
-    }
-    void UnsubscribeArmory()
-    {
-        if (!armorySubscribed) return;
-        WeaponUpgradePickup.AnyPicked -= HandleAnyPickup;
-        armorySubscribed = false;
-    }
-
-    void HandleAnyPickup(WeaponUpgradePickup picked)
-    {
-        if (armoryChoiceResolved || picked == null) return;
-        if (!currentArmoryPickups.Contains(picked)) return;
-
-        armoryChoiceResolved = true;
-
-        if (UpgradePoolManager.Instance && picked.upgradeSO)
-            UpgradePoolManager.Instance.MarkUsed(picked.upgradeSO);
-
-        ClearArmoryChoices(picked, true);
+        currentArmoryChoices.Clear();
     }
 
     // ---------- Puertas ----------
@@ -574,7 +596,7 @@ public class RoomRuntime : MonoBehaviour
         {
             wavesLeft--;
             if (wavesLeft > 0) { StartCoroutine(ArenaNextWaveDelay()); return; }
-            StartCoroutine(SpawnNextArenaWave());
+            StartCoroutine(SpawnNextArenaWave()); // última: abre y spawnea ascensor
             return;
         }
 
@@ -593,14 +615,19 @@ public class RoomRuntime : MonoBehaviour
         {
             if (upgradePickupPrefab && !upgradeSpawned)
             {
-                SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset, fromBoss: true);
+                SpawnUpgradePickup(builder.RoomBounds.center + (Vector3)bossUpgradeOffset);
                 upgradeSpawned = true;
             }
 
             if (isFinalBossFloor)
+            {
                 FloorFlowController.Instance?.WinGame();
-            else if (elevatorExitPrefab)
-                Instantiate(elevatorExitPrefab, builder.RoomBounds.center + (Vector3)elevatorOffset, Quaternion.identity);
+            }
+            else
+            {
+                if (elevatorExitPrefab)
+                    Instantiate(elevatorExitPrefab, builder.RoomBounds.center + (Vector3)elevatorOffset, Quaternion.identity);
+            }
         }
     }
 
@@ -610,31 +637,24 @@ public class RoomRuntime : MonoBehaviour
         yield return StartCoroutine(SpawnNextArenaWave());
     }
 
-    // ---------- Mejoras ----------
-    void SpawnUpgradePickup(Vector3 pos, bool fromBoss)
+    void SpawnUpgradePickup(Vector3 pos)
     {
         if (!upgradePickupPrefab) return;
 
         var go = Instantiate(upgradePickupPrefab, pos, Quaternion.identity);
-        var pickup = go.GetComponent<WeaponUpgradePickup>() ?? go.AddComponent<WeaponUpgradePickup>();
+        var pickup = go.GetComponent<WeaponUpgradePickup>();
+        if (!pickup) return;
 
-        WeaponUpgradeSO so = null;
-        if (UpgradePoolManager.Instance && UpgradePoolManager.Instance.DrawRandomUnique(out var drawn))
-            so = drawn;
-
-        pickup.useScriptable = true;
-        pickup.Assign(so);
-
-        if (so && UpgradePoolManager.Instance && fromBoss)
-            UpgradePoolManager.Instance.MarkUsed(so);
-    }
-
-    // ---------- Utilidad Spawn ----------
-    static Vector3 ClampInside(Bounds b, Vector3 p, float margin)
-    {
-        float x = Mathf.Clamp(p.x, b.min.x + margin, b.max.x - margin);
-        float y = Mathf.Clamp(p.y, b.min.y, b.max.y - margin);
-        return new Vector3(x, y, p.z);
+        if (UpgradePoolManager.Instance)
+        {
+            if (UpgradePoolManager.Instance.DrawRandomUnique(out var so))
+            {
+                pickup.useScriptable = true;
+                pickup.Assign(so);
+            }
+            else pickup.useScriptable = true;
+        }
+        else pickup.useScriptable = true;
     }
 
     System.Collections.IEnumerator PullPlayerIn(Transform player, float distance, float duration)
@@ -662,5 +682,12 @@ public class RoomRuntime : MonoBehaviour
             yield return null;
         }
         if (rb) rb.MovePosition(target); else player.position = target;
+    }
+
+    static Vector3 ClampInside(Bounds b, Vector3 p, float margin)
+    {
+        float x = Mathf.Clamp(p.x, b.min.x + margin, b.max.x - margin);
+        float y = Mathf.Clamp(p.y, b.min.y, b.max.y - margin);
+        return new Vector3(x, y, p.z);
     }
 }
