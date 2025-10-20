@@ -56,7 +56,7 @@ public class WeaponUpgradePickup : MonoBehaviour
             return;
         }
 
-        // Aplicar
+        // 1) Aplicar mejora a las stats del arma
         if (useScriptable && upgradeSO)
         {
             pws.Apply(upgradeSO);
@@ -67,7 +67,17 @@ public class WeaponUpgradePickup : MonoBehaviour
             return;
         }
 
-        // Consumir
+        // 2) Reportar INMEDIATAMENTE al HUD los valores efectivos (sin esperar a disparar)
+        Projectile2D.ReportInstant(
+            damage: pws.damage,
+            bulletSpeed: pws.bulletSpeed,
+            piercing: pws.piercing,
+            bouncing: pws.bouncing,
+            maxBounces: pws.maxBounces,
+            rof: pws.fireRate
+        );
+
+        // 3) Consumir pickup y feedback
         consumed = true;
         DisableVisualsAndColliders();
 

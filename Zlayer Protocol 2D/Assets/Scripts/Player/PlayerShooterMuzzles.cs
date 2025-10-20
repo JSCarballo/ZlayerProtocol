@@ -1,10 +1,8 @@
 using UnityEngine;
 
 /// Shooter 4 direcciones que usa PlayerWeaponStats y dispara desde muzzles.
-/// - Cooldown = 1 / fireRate
-/// - Soporta hold o solo tap (configurable)
-/// - Pixel-snap del spawn y MuzzleFlash opcional
-/// - Copia layer/order del Player si no indicas uno para las balas
+/// Reporta el ROF y las stats iniciales a Projectile2D para que el HUD se actualice
+/// de inmediato al iniciar la escena (sin necesidad de disparar).
 [RequireComponent(typeof(Collider2D))]
 public class PlayerShooterMuzzles : MonoBehaviour
 {
@@ -39,11 +37,13 @@ public class PlayerShooterMuzzles : MonoBehaviour
     [Header("Input")]
     [SerializeField] private bool fireWhileHolding = true; // true: mantener, false: solo tap
 
+    [Header("Debug")]
+    [SerializeField] private bool debugLog = false;
+
     private Collider2D ownerCol;
     private float fireCooldown;
     private Vector2 lastPressedAimDir = Vector2.right;
 
-    // layer/name detectados del Player para copiar a las balas si bulletSortingLayer vacío
     private string detectedLayerName = "Default";
     private int detectedMaxOrder = 0;
 
@@ -69,12 +69,30 @@ public class PlayerShooterMuzzles : MonoBehaviour
             Debug.LogWarning("[PlayerShooterMuzzles] Asigna los 4 muzzles en el inspector.");
         if (!bulletPrefab && !bulletPrefabRight && !bulletPrefabLeft && !bulletPrefabUp && !bulletPrefabDown)
             Debug.LogWarning("[PlayerShooterMuzzles] No hay prefabs de bala asignados.");
+
+        // Reporte temprano (por si el HUD ya está activo)
+        ReportStatsToHUD();
+    }
+
+    void Start()
+    {
+        // Reporte en Start también, por si el Player se inicializa después del HUD
+        ReportStatsToHUD();
+    }
+
+    void OnEnable()
+    {
+        // Si el objeto se re-activa (cambio de piso, etc.), vuelve a reportar
+        ReportStatsToHUD();
     }
 
     void Update()
     {
         float rof = weaponStats ? Mathf.Max(0.05f, weaponStats.fireRate) : 6f;
         fireCooldown -= Time.deltaTime;
+
+        // REPORTA EL ROF AL HUD (desde Projectile2D) cada frame
+        Projectile2D.ReportFireRate(rof);
 
         bool pressed = Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.LeftArrow) ||
                        Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.DownArrow);
@@ -88,11 +106,26 @@ public class PlayerShooterMuzzles : MonoBehaviour
         Vector2 dir = DetermineAimDirImmediate();
         if (dir == Vector2.zero) return;
 
-        // Flash opcional
         if (muzzleFlash) muzzleFlash.Show(dir);
 
         Fire(dir);
         fireCooldown = 1f / rof;
+    }
+
+    // ---------- Reporte al HUD (inicio de juego / reactivaciones) ----------
+    void ReportStatsToHUD()
+    {
+        if (!weaponStats) return;
+
+        // Reporta TODO al snapshot del HUD inmediatamente (sin disparar)
+        Projectile2D.ReportFromPWS(weaponStats);
+        Projectile2D.ReportFireRate(Mathf.Max(0.05f, weaponStats.fireRate));
+
+        if (debugLog)
+        {
+            Debug.Log($"[Shooter] Report inicial → DMG={weaponStats.damage}, ROF={weaponStats.fireRate}, " +
+                      $"SPD={weaponStats.bulletSpeed}, PRC={weaponStats.piercing}, BNC={weaponStats.bouncing}, MB={weaponStats.maxBounces}");
+        }
     }
 
     Vector2 DetermineAimDirImmediate()
@@ -127,21 +160,18 @@ public class PlayerShooterMuzzles : MonoBehaviour
         GameObject b = Instantiate(prefab, spawnPos, Quaternion.identity);
         b.transform.localScale = Vector3.one;
 
-        // Ignorar colisión con el Player
         var bCol = b.GetComponent<Collider2D>();
         if (ownerCol && bCol) Physics2D.IgnoreCollision(ownerCol, bCol, true);
 
         EnsureBulletVisible(b);
-
-        // Aplicar stats del arma a la bala
         ApplyStatsToBullet(b, dir);
     }
 
     void ApplyStatsToBullet(GameObject b, Vector2 dir)
     {
+        var proj = b.GetComponent<Projectile2D>();
         float bulletSpeed = weaponStats ? weaponStats.bulletSpeed : 16f;
 
-        var proj = b.GetComponent<Projectile2D>();
         if (proj)
         {
             float dmg = weaponStats ? weaponStats.damage : proj.damage;
@@ -150,13 +180,18 @@ public class PlayerShooterMuzzles : MonoBehaviour
             int mb = weaponStats ? weaponStats.maxBounces : proj.maxBounces;
 
             proj.SetStats(dmg, prc, bnc, mb);
-            proj.Launch(dir, bulletSpeed);
+            if (debugLog && weaponStats)
+                Debug.Log($"[Shooter] Stats→ DMG={weaponStats.damage}, ROF={weaponStats.fireRate}, SPD={weaponStats.bulletSpeed}, PRC={weaponStats.piercing}, BNC={weaponStats.bouncing}, MB={weaponStats.maxBounces}");
+
+            proj.Launch(dir, bulletSpeed); // esto también actualizará el snapshot con speed
         }
         else
         {
-            // Prefab sin Projectile2D: empuje directo por RB si existe
             var rb = b.GetComponent<Rigidbody2D>();
             if (rb) rb.linearVelocity = dir.normalized * bulletSpeed;
+
+            // Si no hay Projectile2D, al menos podríamos actualizar speed en snapshot,
+            // pero al no tener clase, lo omitimos.
         }
     }
 
@@ -171,9 +206,7 @@ public class PlayerShooterMuzzles : MonoBehaviour
         sr.sortingOrder = bulletOrderInLayer;
 
         var c = sr.color; c.a = Mathf.Clamp01(c.a <= 0f ? 1f : c.a); sr.color = c;
-
-        var t = sr.transform;
-        t.position = new Vector3(t.position.x, t.position.y, 0f);
+        var t = sr.transform; t.position = new Vector3(t.position.x, t.position.y, 0f);
     }
 
     Transform GetMuzzle(Vector2 dir)

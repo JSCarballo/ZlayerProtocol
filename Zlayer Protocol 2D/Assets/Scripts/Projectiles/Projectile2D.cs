@@ -2,14 +2,59 @@ using UnityEngine;
 using System;
 
 /// Proyectil 2D que recibe stats del arma y aplica daño al impactar.
-/// - Llama a SetStats(...) o ConfigureFromStats(PlayerWeaponStats) antes de Launch.
-/// - Launch(dir [, speedOverride]) mueve la bala.
-/// - Rebota si 'bouncing' con 'maxBounces' > 0; si no, se destruye en paredes.
-/// - Daño a Health con Damage(float) o Damage(int) si existen.
-/// - "Walls" se detecta por nombre de capa o por TilemapCollider2D.
+/// Además, expone un snapshot estático para HUD (daño, speed, flags, bounces, rof).
 [RequireComponent(typeof(Collider2D))]
 public class Projectile2D : MonoBehaviour
 {
+    // ---------- HUD Snapshot ----------
+    public struct HUDSnapshot
+    {
+        public float damage;
+        public float speed;
+        public float rof;       // disparos/seg. Reportado por el shooter o por pickup.
+        public bool piercing;
+        public bool bouncing;
+        public int maxBounces;
+    }
+
+    public static event System.Action<HUDSnapshot> OnHUDSnapshotChanged;
+
+    private static HUDSnapshot lastHUD;
+    private static bool hasHUD = false;
+
+    public static bool HasHUD => hasHUD;
+    public static HUDSnapshot GetLastHUD() => lastHUD;
+
+    /// Llamado por el shooter para reportar el ROF actual (si cambia).
+    public static void ReportFireRate(float rof)
+    {
+        lastHUD.rof = Mathf.Max(0.0001f, rof);
+        hasHUD = true;
+        OnHUDSnapshotChanged?.Invoke(lastHUD);
+    }
+
+    /// Llamado por pickups o bridges para actualizar el HUD en caliente (sin disparar).
+    public static void ReportInstant(float damage, float bulletSpeed, bool piercing, bool bouncing, int maxBounces, float rof = -1f)
+    {
+        lastHUD.damage = damage;
+        lastHUD.speed = bulletSpeed;
+        lastHUD.piercing = piercing;
+        lastHUD.bouncing = bouncing;
+        lastHUD.maxBounces = Mathf.Max(0, maxBounces);
+        if (rof > 0f) lastHUD.rof = rof;
+
+        hasHUD = true;
+        OnHUDSnapshotChanged?.Invoke(lastHUD);
+    }
+
+    /// Azúcar: actualizar snapshot desde PlayerWeaponStats (si lo usas internamente).
+    public static void ReportFromPWS(PlayerWeaponStats ws)
+    {
+        if (!ws) return;
+        ReportInstant(ws.damage, ws.bulletSpeed, ws.piercing, ws.bouncing, ws.maxBounces, ws.fireRate);
+    }
+
+    // ---------- Config propia del proyectil ----------
     [Header("Movimiento")]
     [SerializeField] private float speed = 12f;
     [SerializeField] private bool faceVelocity = false;
@@ -22,11 +67,13 @@ public class Projectile2D : MonoBehaviour
     [SerializeField] private string wallsLayerName = "Walls";
 
     [Header("Daño / Comportamiento")]
-    [Tooltip("Daño base si no se configura por SetStats/ConfigureFromStats.")]
     public float damage = 1f;
     public bool piercing = false;
     public bool bouncing = false;
     public int maxBounces = 0;
+
+    [Header("Debug")]
+    [SerializeField] private bool debugLog = false;
 
     private Rigidbody2D rb;
     private Vector2 vel;
@@ -41,7 +88,6 @@ public class Projectile2D : MonoBehaviour
 
         bouncesLeft = maxBounces;
 
-        // Garantizar visibilidad
         var sr = GetComponent<SpriteRenderer>() ?? GetComponentInChildren<SpriteRenderer>();
         if (sr)
         {
@@ -51,7 +97,7 @@ public class Projectile2D : MonoBehaviour
         }
     }
 
-    // ====== API de stats ======
+    // ====== API de stats que usa el Shooter ======
     public void SetStats(float dmg, bool prc, bool bnc, int maxB)
     {
         damage = dmg;
@@ -59,9 +105,19 @@ public class Projectile2D : MonoBehaviour
         bouncing = bnc;
         maxBounces = Mathf.Max(0, maxB);
         bouncesLeft = maxBounces;
+
+        // Actualiza snapshot parcial
+        lastHUD.damage = damage;
+        lastHUD.piercing = piercing;
+        lastHUD.bouncing = bouncing;
+        lastHUD.maxBounces = maxBounces;
+        hasHUD = true;
+        OnHUDSnapshotChanged?.Invoke(lastHUD);
+
+        if (debugLog)
+            Debug.Log($"[Projectile] SetStats: DMG={damage}, PRC={piercing}, BNC={bouncing}, MB={maxBounces}");
     }
 
-    /// Compatibilidad con flujos previos.
     public void ConfigureFromStats(PlayerWeaponStats stats)
     {
         if (!stats) return;
@@ -78,6 +134,14 @@ public class Projectile2D : MonoBehaviour
         if (rb) rb.linearVelocity = vel;
         if (faceVelocity && vel.sqrMagnitude > 1e-4f)
             transform.right = vel;
+
+        // Completar snapshot con speed efectiva
+        lastHUD.speed = speed;
+        hasHUD = true;
+        OnHUDSnapshotChanged?.Invoke(lastHUD);
+
+        if (debugLog)
+            Debug.Log($"[Projectile] Launch dir={dir}, speed={speed}");
     }
 
     void Update()
@@ -96,7 +160,6 @@ public class Projectile2D : MonoBehaviour
         var hit = other.gameObject;
         if (!hit) return;
 
-        // Paredes o tilemap
         bool isWallLayer = !string.IsNullOrEmpty(wallsLayerName) && LayerMask.LayerToName(hit.layer) == wallsLayerName;
         bool isTilemap = hit.GetComponent<UnityEngine.Tilemaps.TilemapCollider2D>();
 
@@ -107,13 +170,14 @@ public class Projectile2D : MonoBehaviour
                 bouncesLeft--;
                 vel = -vel;
                 if (rb) rb.linearVelocity = vel;
+                if (debugLog) Debug.Log($"[Projectile] Bounce, left={bouncesLeft}");
                 return;
             }
+            if (debugLog) Debug.Log("[Projectile] Hit wall → destroy");
             Destroy(gameObject);
             return;
         }
 
-        // Daño a Health (objeto o su padre)
         var hp = hit.GetComponent<Health>() ?? hit.GetComponentInParent<Health>();
         if (hp)
         {
@@ -124,17 +188,10 @@ public class Projectile2D : MonoBehaviour
 
     void DealDamage(Health hp, float dmg)
     {
-        if (!hp) return;
         var t = hp.GetType();
-
-        // Damage(float)
-        var mFloat = t.GetMethod("Damage", new Type[] { typeof(float) });
-        if (mFloat != null) { mFloat.Invoke(hp, new object[] { dmg }); return; }
-
-        // Damage(int)
-        var mInt = t.GetMethod("Damage", new Type[] { typeof(int) });
-        if (mInt != null) { mInt.Invoke(hp, new object[] { Mathf.RoundToInt(dmg) }); return; }
-
-        // Si no existe Damage, no hacemos nada.
+        var mFloat = t.GetMethod("Damage", new System.Type[] { typeof(float) });
+        if (mFloat != null) { mFloat.Invoke(hp, new object[] { dmg }); if (debugLog) Debug.Log($"[Projectile] Damage(float)={dmg} → {hp.name}"); return; }
+        var mInt = t.GetMethod("Damage", new System.Type[] { typeof(int) });
+        if (mInt != null) { int di = Mathf.RoundToInt(dmg); mInt.Invoke(hp, new object[] { di }); if (debugLog) Debug.Log($"[Projectile] Damage(int)={di} → {hp.name}"); return; }
     }
 }

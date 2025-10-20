@@ -1044,7 +1044,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20b23601d2eeea444a9c968157e6bc6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponStats: {fileID: 0}
+  weaponStats: {fileID: 802531999313550184}
   bulletPrefab: {fileID: 0}
   bulletPrefabRight: {fileID: 7221209315192998083, guid: f997f504e0e4e174a8dd864fc120ee02, type: 3}
   bulletPrefabLeft: {fileID: 5584961044401737389, guid: 4b9f100046d2bb941874e558d57951e3, type: 3}
@@ -1061,6 +1061,7 @@ MonoBehaviour:
   bulletSortingLayer: 
   bulletOrderInLayer: 10
   fireWhileHolding: 1
+  debugLog: 0
 --- !u!114 &4420135977492995065
 MonoBehaviour:
   m_ObjectHideFlags: 0
