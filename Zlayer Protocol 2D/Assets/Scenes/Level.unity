@@ -6026,9 +6026,49 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallH
+      value: 
+      objectReference: {fileID: 11400000, guid: e1618bef8f80e5844a0bad38b5c2c763, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallV
+      value: 
+      objectReference: {fileID: 11400000, guid: c8400b6a6a821b34fac975d37688b470, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
       propertyPath: doorPrefab
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: floorEdgeE
+      value: 
+      objectReference: {fileID: 11400000, guid: 1a87b6fe3ec114740b8dde966e8faf83, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: floorEdgeN
+      value: 
+      objectReference: {fileID: 11400000, guid: 93c0e58e5cf978c4d93c00bb4947b8ee, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: floorEdgeS
+      value: 
+      objectReference: {fileID: 11400000, guid: 89b94355868fedb41aa30fb5dd7e0da5, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: floorEdgeW
+      value: 
+      objectReference: {fileID: 11400000, guid: 9624ad26b819f6842b58c6e6de0f64a2, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallCornerNE
+      value: 
+      objectReference: {fileID: 11400000, guid: 5dfbd5064b8205343ba3b63f97fad9b9, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallCornerNW
+      value: 
+      objectReference: {fileID: 11400000, guid: f3772d8e3bf364f4db7058c7e16642cd, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallCornerSE
+      value: 
+      objectReference: {fileID: 11400000, guid: 1b36fd1da24c16649a5a98f3e6d48ba7, type: 2}
+    - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
+      propertyPath: wallCornerSW
+      value: 
+      objectReference: {fileID: 11400000, guid: 2615cc8478c193149bb825c4fbb4177a, type: 2}
     - target: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
       propertyPath: roomSizeTiles.x
       value: 20
