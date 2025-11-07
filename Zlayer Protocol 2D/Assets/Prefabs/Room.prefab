@@ -517,8 +517,44 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   floorMap: {fileID: 6586190438877415198}
   wallsMap: {fileID: 6078149586695221486}
-  floorTile: {fileID: 11400000, guid: 45cfaef990dd5b7458926914ddd748f9, type: 2}
-  wallTile: {fileID: 11400000, guid: 4c31b85bab1257a4b9fee46a40a379a6, type: 2}
+  floorTile: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeN: {fileID: 11400000, guid: c60d7e7db92fcd246a97110424e3750f, type: 2}
+  floorEdgeS: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeE: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeW: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeN_LeftCap: {fileID: 11400000, guid: f866c3028ed8269499db10691e97bf83, type: 2}
+  floorEdgeN_RightCap: {fileID: 11400000, guid: 0abec24742810a94bb8b0561d6b42776, type: 2}
+  floorEdgeS_LeftCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeS_RightCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeE_TopCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeE_BottomCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeW_TopCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorEdgeW_BottomCap: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  wallH: {fileID: 11400000, guid: 5b81a360d7438f34fbad15933393cdc4, type: 2}
+  wallV: {fileID: 11400000, guid: a449a3e6826458d4a87cd775900c38c7, type: 2}
+  wallCornerNW: {fileID: 11400000, guid: f38fbd0827699bf409239f4a275ea30e, type: 2}
+  wallCornerNE: {fileID: 11400000, guid: eb22db296db44f94a8e27515b0d0d7f1, type: 2}
+  wallCornerSE: {fileID: 11400000, guid: cada7f8b695ca944694743cdaae5d586, type: 2}
+  wallCornerSW: {fileID: 11400000, guid: 9762ba62bf5276d4f964f94e51f4839d, type: 2}
+  topEdge:
+  - {fileID: 11400000, guid: bc8bcbb77017c5d468d09272c358e33e, type: 2}
+  bottomEdge:
+  - {fileID: 11400000, guid: ecdba6776ce857a428a5e781960bd447, type: 2}
+  leftEdge:
+  - {fileID: 11400000, guid: 209d0513784b64a4e8a347480ba24671, type: 2}
+  rightEdge:
+  - {fileID: 11400000, guid: 4df3869d52bc1f6418829fd1f3e3b137, type: 2}
+  sequenceFit: 0
+  thresholdH: {fileID: 0}
+  thresholdV: {fileID: 0}
+  doorNorthLeftCorner: {fileID: 11400000, guid: adeaef4547d3d8a4181095fc99667c62, type: 2}
+  doorNorthRightCorner: {fileID: 11400000, guid: 7b28670a6ecaa5e41b0bbb6c5217775c, type: 2}
+  doorSouthLeftCorner: {fileID: 11400000, guid: 4e1d681631df9cd4bb89bc4be9a61285, type: 2}
+  doorSouthRightCorner: {fileID: 11400000, guid: b02769e7be451d54eac9d13cf688bf61, type: 2}
+  doorEastTopCorner: {fileID: 11400000, guid: c3f2bad6ce3c0dc4b8128a025dc323fe, type: 2}
+  doorEastBottomCorner: {fileID: 11400000, guid: b02769e7be451d54eac9d13cf688bf61, type: 2}
+  doorWestTopCorner: {fileID: 11400000, guid: b446537f57f9a4641b52ee2e9a827e35, type: 2}
+  doorWestBottomCorner: {fileID: 11400000, guid: 4e1d681631df9cd4bb89bc4be9a61285, type: 2}
   roomSizeTiles: {x: 16, y: 9}
   north: 1
   south: 1
@@ -541,7 +577,7 @@ MonoBehaviour:
   maxEnemies: 8
   doorBarrierPrefab: {fileID: 6873672282548014664, guid: 06ce302ab615b7b4094dde916b93aa7e, type: 3}
   doorThickness: 0.5
-  doorPadding: -0.5
+  doorPadding: -0.05
   doorInset: 0
   enableCamTransition: 1
   camTransitionDuration: 0.5

@@ -75,10 +75,10 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: -1482758893
-  m_SortingLayer: 6
+  m_SortingLayerID: -1431103535
+  m_SortingLayer: 3
   m_SortingOrder: 0
-  m_Sprite: {fileID: 745472559952305852, guid: f3d95ed686e578f46b0107304133f94f, type: 3}
+  m_Sprite: {fileID: -3192031096321652550, guid: 2e7fb2c29e5c218408a848cdb8c1fc42, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -127,7 +127,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 0.22, y: 0.23}
+    oldSize: {x: 0.6875, y: 0.71875}
     newSize: {x: 0.75, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -147,5 +147,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7ddbf07ea48327498d5e46bf2b10194, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  holdTime: 1
-  sfx: {fileID: 0}
+  playerTag: Player
+  autoTriggerOnTouch: 1
+  triggerDelay: 0.35
+  lockPlayerOnUse: 1

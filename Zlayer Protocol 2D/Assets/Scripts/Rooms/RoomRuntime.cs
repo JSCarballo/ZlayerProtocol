@@ -400,20 +400,32 @@ public class RoomRuntime : MonoBehaviour
             Vector3 finalPos = ds.center + (Vector3)(inwardNormal * doorInset);
 
             var go = Instantiate(doorBarrierPrefab, finalPos, Quaternion.identity, transform);
-            var box = go.GetComponent<BoxCollider2D>();
-            if (box) box.size = finalSize;
-
-            var sr = go.GetComponent<SpriteRenderer>();
-            if (sr && sr.sprite != null)
-            {
-                Vector2 spriteSize = sr.sprite.bounds.size;
-                go.transform.localScale = new Vector3(
-                    finalSize.x / Mathf.Max(0.0001f, spriteSize.x),
-                    finalSize.y / Mathf.Max(0.0001f, spriteSize.y),
-                    1f
-                );
-            }
             go.gameObject.layer = LayerMask.NameToLayer("Walls");
+
+            // Si el prefab tiene Door, dejamos que Door haga todo (sprite + escala + collider)
+            var door = go.GetComponent<Door>();
+            if (door)
+            {
+                door.Configure(horizontal, finalSize, open: false);
+            }
+            else
+            {
+                // Fallback legacy (sin componente Door): intentamos ajustar BoxCollider2D y escalar el sprite actual
+                var box = go.GetComponent<BoxCollider2D>();
+                if (box) box.size = finalSize;
+
+                var sr = go.GetComponent<SpriteRenderer>();
+                if (sr && sr.sprite != null)
+                {
+                    Vector2 spriteSize = sr.sprite.bounds.size; // mundo
+                    go.transform.localScale = new Vector3(
+                        finalSize.x / Mathf.Max(0.0001f, spriteSize.x),
+                        finalSize.y / Mathf.Max(0.0001f, spriteSize.y),
+                        1f
+                    );
+                }
+            }
+
             spawnedDoors.Add(go);
         }
     }
