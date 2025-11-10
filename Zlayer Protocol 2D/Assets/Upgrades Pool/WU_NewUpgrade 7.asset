@@ -13,24 +13,19 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade 7
   m_EditorClassIdentifier: 
   displayName: Experimental Trigger
-  description: 'Cadencia +50% (raro)
+  description: 'FireRate x2
 
-    id: UP_FIRERATE_50
 
-    displayName: Experimental
-    Trigger
+    Multiply FireRate by using a Experimental Trigger
 
-    upgrade: FireRateMult, amount = 1.5
-
-    unique = true, weight =
-    0.3'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0
   addBulletSpeed: 0
   addMaxBounces: 0
   mulDamage: 1
-  mulFireRate: 5
+  mulFireRate: 2
   mulBulletSpeed: 1
   enablePiercing: 0
   enableBouncing: 0

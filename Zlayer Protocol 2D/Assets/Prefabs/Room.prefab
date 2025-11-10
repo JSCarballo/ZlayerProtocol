@@ -517,7 +517,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   floorMap: {fileID: 6586190438877415198}
   wallsMap: {fileID: 6078149586695221486}
-  floorTile: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
+  floorA: {fileID: 11400000, guid: 327d83e3030ac8041898b365a368d65e, type: 2}
+  floorB: {fileID: 11400000, guid: 4b53727cb3985bb4b925a6807ce17669, type: 2}
+  floorC: {fileID: 11400000, guid: 3b7e889da2ea1be46a3f9818a8911312, type: 2}
+  weightA: 0.5
+  weightB: 0.3
+  weightC: 0
+  usePerlin: 1
+  noiseScale: 0.45
+  noiseSeed: 1337
+  floorFallback: {fileID: 0}
   floorEdgeN: {fileID: 11400000, guid: c60d7e7db92fcd246a97110424e3750f, type: 2}
   floorEdgeS: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
   floorEdgeE: {fileID: 11400000, guid: d85a22a45e280684099c26a6d801ef25, type: 2}
@@ -555,6 +564,14 @@ MonoBehaviour:
   doorEastBottomCorner: {fileID: 11400000, guid: b02769e7be451d54eac9d13cf688bf61, type: 2}
   doorWestTopCorner: {fileID: 11400000, guid: b446537f57f9a4641b52ee2e9a827e35, type: 2}
   doorWestBottomCorner: {fileID: 11400000, guid: 4e1d681631df9cd4bb89bc4be9a61285, type: 2}
+  enableCenterLight: 0
+  centerLightSprite: {fileID: -3760375144965711062, guid: ff500c4673331af4c9e5b4d0ccd130ad, type: 3}
+  centerLightMaterial: {fileID: 2100000, guid: faed055826ae9f54ca4307ffba275bc3, type: 2}
+  centerLightWorldSize: {x: 16, y: 9}
+  lightOpenColor: {r: 1, g: 1, b: 1, a: 1}
+  lightClosedColor: {r: 1, g: 0, b: 0, a: 1}
+  centerLightYOffset: 0
+  centerLightSortingOrderOffset: 1
   roomSizeTiles: {x: 16, y: 9}
   north: 1
   south: 1
@@ -579,6 +596,10 @@ MonoBehaviour:
   doorThickness: 0.5
   doorPadding: -0.05
   doorInset: 0
+  doorSpriteHorizontal: {fileID: -6704226890558658999, guid: b9c2fff482efce246b62f1b302bb82b3, type: 3}
+  doorSpriteVertical: {fileID: 7401698355613020230, guid: d777a72ea30933243ac141a4b70ba48d, type: 3}
+  doorH_VisualHeightMul: 2
+  doorSortingOrderOffset: 5
   enableCamTransition: 1
   camTransitionDuration: 0.5
   camCurve:
@@ -638,6 +659,13 @@ MonoBehaviour:
   arenaWaveMin: 6
   arenaWaveMax: 10
   arenaInterval: 1
+  useRoomOverlay: 1
+  overlaySprite: {fileID: 4841605080539966357, guid: 03ae8a66b9e3bbf4ab2365a9ff18606e, type: 3}
+  overlayMaterial: {fileID: 2100000, guid: faed055826ae9f54ca4307ffba275bc3, type: 2}
+  overlayOpenColor: {r: 1, g: 1, b: 1, a: 0.11764706}
+  overlayClosedColor: {r: 1, g: 0, b: 0, a: 0.39215687}
+  overlayExtraScale: 1.1
+  overlaySortingOrderOffset: 1000
   gridCell: {x: 0, y: 0}
 --- !u!1 &8610392696869077077
 GameObject:

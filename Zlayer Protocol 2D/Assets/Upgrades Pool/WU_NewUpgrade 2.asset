@@ -13,17 +13,13 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade 2
   m_EditorClassIdentifier: 
   displayName: High-Pressure Rounds
-  description: 'Velocidad de bala +20%
+  description: 'BulletSpeed x1.5
 
-    id: UP_BULLETSPEED_20
 
-    displayName:
-    High-Pressure Rounds
+    Multiply BulletSpeed by using High-Pressure
+    Rounds
 
-    upgrade: SpeedMult, amount = 1.2
-
-    unique = true,
-    weight = 0.8'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0
@@ -31,6 +27,6 @@ MonoBehaviour:
   addMaxBounces: 0
   mulDamage: 1
   mulFireRate: 1
-  mulBulletSpeed: 2
+  mulBulletSpeed: 1.5
   enablePiercing: 0
   enableBouncing: 0

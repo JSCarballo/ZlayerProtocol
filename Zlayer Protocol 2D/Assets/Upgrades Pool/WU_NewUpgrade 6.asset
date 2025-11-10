@@ -13,24 +13,19 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade 6
   m_EditorClassIdentifier: 
   displayName: Shattered Choke
-  description: 'Velocidad de bala +40%
+  description: 'BulletSpeed +3
 
-    id: UP_BULLETSPEED_40
 
-    displayName:
-    Shattered Choke
+    Adds BulletSpeed by using Shattered Choke
 
-    upgrade: SpeedMult, amount = 1.2
-
-    unique = true, weight
-    = 0.8'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0
-  addBulletSpeed: 0
+  addBulletSpeed: 3
   addMaxBounces: 0
   mulDamage: 1
   mulFireRate: 1
-  mulBulletSpeed: 4
+  mulBulletSpeed: 1
   enablePiercing: 0
   enableBouncing: 0

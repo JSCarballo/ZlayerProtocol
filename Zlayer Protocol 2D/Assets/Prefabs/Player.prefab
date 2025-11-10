@@ -806,6 +806,7 @@ GameObject:
   - component: {fileID: 5296852747580818282}
   - component: {fileID: 5707561587750881274}
   - component: {fileID: 802531999313550184}
+  - component: {fileID: -1202608312504605309}
   m_Layer: 6
   m_Name: Player
   m_TagString: PLayer
@@ -1111,7 +1112,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ddb5c7c19c431544a9a18949681bb62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  invulnSeconds: 1
+  invulnSeconds: 1.5
   blinker: {fileID: 5296852747580818282}
 --- !u!114 &5296852747580818282
 MonoBehaviour:
@@ -1133,8 +1134,8 @@ MonoBehaviour:
   autoCollectChildren: 1
   excludeNameContains:
   - Flash
-  blinkAlpha: 0.25
-  blinkHz: 12
+  blinkAlpha: 0.2
+  blinkHz: 10
 --- !u!114 &5707561587750881274
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1174,3 +1175,16 @@ MonoBehaviour:
   piercing: 0
   bouncing: 0
   maxBounces: 0
+--- !u!114 &-1202608312504605309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9212037553653903690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 017817275acdb104b8ab149a63479072, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerHealth: {fileID: 7730909980260266431}

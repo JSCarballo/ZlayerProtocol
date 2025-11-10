@@ -15,19 +15,15 @@ MonoBehaviour:
   displayName: Ricochet Coating
   description: 'Bounce
 
-    id: UP_BOUNCE
 
-    displayName: Ricochet Coating
+    Now your bullets can Bounce on the walls
 
-    upgrade:
-    Bounce, amount = 1
-
-    unique = true, weight = 0.6'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0
   addBulletSpeed: 0
-  addMaxBounces: 0
+  addMaxBounces: 2
   mulDamage: 1
   mulFireRate: 1
   mulBulletSpeed: 1

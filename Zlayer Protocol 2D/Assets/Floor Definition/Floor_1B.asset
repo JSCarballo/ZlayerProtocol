@@ -19,8 +19,8 @@ MonoBehaviour:
   branchChance: 0.25
   bossIsExtra: 0
   armoryIsExtra: 0
-  enemyMin: 5
-  enemyMax: 8
+  enemyMin: 10
+  enemyMax: 12
   isArenaFloor: 1
   arenaWaves: 3
   arenaWaveMin: 3

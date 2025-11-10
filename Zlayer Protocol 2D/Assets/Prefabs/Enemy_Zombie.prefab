@@ -387,8 +387,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ca9200d836515448a1090a696750fa6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHP: 3
-  currentHP: 3
+  maxHP: 4
+  currentHP: 4
   destroyOnDeath: 1
   invincible: 0
 --- !u!70 &2103551324408445694
@@ -440,7 +440,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ae61b3c06cc6cb4b966de189d3c231a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 1.5
+  moveSpeed: 2
   stopDistance: 0.4
   encircleRadius: 2.1
   encircleSlots: 5
@@ -496,7 +496,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enabledForThis: 1
   anchorOverride: {fileID: 0}
-  heightOffset: 0.25
+  heightOffset: 0.1
   useSpriteTop: 1
   treatAsBoss: 0
   bossTag: Boss

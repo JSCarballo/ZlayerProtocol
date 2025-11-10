@@ -13,23 +13,19 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade 1
   m_EditorClassIdentifier: 
   displayName: Rapid Receiver
-  description: 'Cadencia +25%
+  description: 'FireRate +3
 
-    id: UP_FIRERATE_25
 
-    displayName: Rapid Receiver
+    Adds FireRate by using a Rapid Receiver
 
-    upgrade:
-    FireRateMult, amount = 1.25
-
-    unique = true, weight = 1.0'
+'
   icon: {fileID: 0}
   addDamage: 0
-  addFireRate: 0
+  addFireRate: 3
   addBulletSpeed: 0
   addMaxBounces: 0
   mulDamage: 1
-  mulFireRate: 2.5
+  mulFireRate: 1
   mulBulletSpeed: 1
   enablePiercing: 0
   enableBouncing: 0

@@ -10,28 +10,43 @@ public class MinimapUI : MonoBehaviour
     [Header("Refs (requeridos)")]
     public RectTransform container; // Panel vacío donde instanciamos iconos
 
-    [Header("Prefabs de iconos (Image)")]
+    [Header("Prefabs de iconos (VISITADA)")]
     public Image roomIconPrefab;
     public Image bossIconPrefab;
     public Image armoryIconPrefab;
     public Image playerIconPrefab;
+
+    [Header("Prefabs de iconos (NO VISITADA, opcional)")]
+    [Tooltip("Si se deja vacío, se usará el prefab de visitada con un tinte.")]
+    public Image roomIconUnvisitedPrefab;
+    public Image bossIconUnvisitedPrefab;
+    public Image armoryIconUnvisitedPrefab;
+
+    [Header("Fallback de NO VISITADA (si no asignas prefab)")]
+    public Color unvisitedTint = new Color(1f, 1f, 1f, 0.6f);
 
     [Header("Layout")]
     public float cellSize = 20f;          // tamaño en píxeles por celda
     public bool autoCenter = true;        // centrar contenido al reconstruir
     public Vector2 manualOffset = Vector2.zero; // offset extra si lo quieres mover
 
-    readonly Dictionary<Vector2Int, Image> icons = new();
+    // --- Estructuras internas ---
+    class IconEntry
+    {
+        public RectTransform root;
+        public Image visited;
+        public Image unvisited;
+        public Vector2Int cell;
+    }
+
+    readonly Dictionary<Vector2Int, IconEntry> icons = new();
     Image playerIcon;
 
     Coroutine waitRoutine;
 
     void OnEnable()
     {
-        // Siempre quedamos escuchando la señal del generador (esté o no el registry)
         ProcDungeonGenerator.OnGenerated += HandleGenerated;
-
-        // Arrancamos una rutina que espera a que aparezca el Registry y entonces se suscribe
         waitRoutine = StartCoroutine(EnsureRegistryAndBindThenRebuild());
     }
 
@@ -51,7 +66,6 @@ public class MinimapUI : MonoBehaviour
 
     IEnumerator EnsureRegistryAndBindThenRebuild()
     {
-        // Espera hasta que exista el Registry
         while (DungeonMapRegistry.Instance == null) yield return null;
 
         var reg = DungeonMapRegistry.Instance;
@@ -59,12 +73,11 @@ public class MinimapUI : MonoBehaviour
         reg.OnRoomUpdated += HandleUpdated;
         reg.OnPlayerEnteredRoom += HandlePlayerEntered;
 
-        RebuildFromRegistry(); // ahora sí, hay datos para leer
+        RebuildFromRegistry();
     }
 
     void HandleGenerated()
     {
-        // Al finalizar la generación del piso, rehacemos el mapa
         RebuildFromRegistry();
     }
 
@@ -73,7 +86,6 @@ public class MinimapUI : MonoBehaviour
         if (!container) { Debug.LogWarning("[MinimapUI] 'container' no asignado."); return; }
         if (!roomIconPrefab) { Debug.LogWarning("[MinimapUI] 'roomIconPrefab' no asignado."); return; }
 
-        // Limpia elementos previos
         foreach (Transform t in container) Destroy(t.gameObject);
         icons.Clear();
         playerIcon = null;
@@ -82,9 +94,9 @@ public class MinimapUI : MonoBehaviour
         if (reg == null) return;
 
         var all = new List<DungeonMapRegistry.RoomInfo>(reg.AllRooms());
-        if (all.Count == 0) return; // el generador aún no registró nada (HandleGenerated volverá a llamar)
+        if (all.Count == 0) return;
 
-        // Calcular bounds en celdas para auto-centrar
+        // Bounds para auto-centro
         int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
         foreach (var info in all)
         {
@@ -102,14 +114,14 @@ public class MinimapUI : MonoBehaviour
         }
         offset += manualOffset;
 
-        // Instanciar todos los íconos
+        // Crear íconos por sala
         foreach (var info in all)
         {
             InstantiateRoomIcon(info, offset);
             HandleUpdated(info); // aplica discovered/visited
         }
 
-        // Player icon en la sala Start (si ya existe, OnPlayerEntered lo actualizará)
+        // Icono del jugador en la sala Start
         var startCell = FindStartCell(all);
         if (playerIconPrefab)
         {
@@ -118,17 +130,72 @@ public class MinimapUI : MonoBehaviour
         }
     }
 
+    // --- Helpers de prefabs ---
+    Image PickVisitedPrefab(DungeonMapRegistry.RoomInfo info)
+    {
+        if (info.isBoss && bossIconPrefab) return bossIconPrefab;
+        if (info.isArmory && armoryIconPrefab) return armoryIconPrefab;
+        return roomIconPrefab;
+    }
+
+    Image PickUnvisitedPrefab(DungeonMapRegistry.RoomInfo info)
+    {
+        if (info.isBoss && bossIconUnvisitedPrefab) return bossIconUnvisitedPrefab;
+        if (info.isArmory && armoryIconUnvisitedPrefab) return armoryIconUnvisitedPrefab;
+        return roomIconUnvisitedPrefab;
+    }
+
     void InstantiateRoomIcon(DungeonMapRegistry.RoomInfo info, Vector2 offset)
     {
-        Image prefab = roomIconPrefab;
-        if (info.isBoss && bossIconPrefab) prefab = bossIconPrefab;
-        else if (info.isArmory && armoryIconPrefab) prefab = armoryIconPrefab;
+        // Crear root para la celda
+        var rootGO = new GameObject($"Cell_{info.cell.x}_{info.cell.y}", typeof(RectTransform));
+        var root = rootGO.GetComponent<RectTransform>();
+        root.SetParent(container, false);
+        root.anchorMin = new Vector2(0.5f, 0.5f);
+        root.anchorMax = new Vector2(0.5f, 0.5f);
+        root.pivot = new Vector2(0.5f, 0.5f);
+        root.anchoredPosition = GridToUI(info.cell, offset);
+        root.localScale = Vector3.one;
+        root.sizeDelta = Vector2.zero;
 
-        var img = Instantiate(prefab, container);
-        img.gameObject.name = $"Room_{info.cell.x}_{info.cell.y}";
-        img.rectTransform.anchoredPosition = GridToUI(info.cell, offset);
-        img.enabled = info.discovered;
-        icons[info.cell] = img;
+        // Prefabs
+        var visitedPrefab = PickVisitedPrefab(info);
+        var unvisitedPrefab = PickUnvisitedPrefab(info);
+
+        // Imagen visitada
+        var visited = Instantiate(visitedPrefab, root);
+        visited.name = "Visited";
+        visited.rectTransform.anchoredPosition = Vector2.zero;
+
+        // Imagen no-visitada
+        Image unvisited;
+        if (unvisitedPrefab != null)
+        {
+            unvisited = Instantiate(unvisitedPrefab, root);
+        }
+        else
+        {
+            // Fallback: clonar el visitado y tintar
+            unvisited = Instantiate(visitedPrefab, root);
+            var c = unvisited.color; c = unvisitedTint; unvisited.color = c;
+        }
+        unvisited.name = "Unvisited";
+        unvisited.rectTransform.anchoredPosition = Vector2.zero;
+
+        var entry = new IconEntry
+        {
+            root = root,
+            visited = visited,
+            unvisited = unvisited,
+            cell = info.cell
+        };
+
+        icons[info.cell] = entry;
+
+        // Estado inicial (se ajusta nuevamente en HandleUpdated)
+        root.gameObject.SetActive(info.discovered);
+        visited.enabled = info.discovered && info.visited;
+        unvisited.enabled = info.discovered && !info.visited;
     }
 
     void HandleRegistered(DungeonMapRegistry.RoomInfo info)
@@ -140,19 +207,37 @@ public class MinimapUI : MonoBehaviour
 
     void HandleUpdated(DungeonMapRegistry.RoomInfo info)
     {
-        if (icons.TryGetValue(info.cell, out var img) && img)
+        if (icons.TryGetValue(info.cell, out var entry) && entry != null)
         {
-            img.enabled = info.discovered;
-            img.color = info.visited ? Color.white : new Color(1f, 1f, 1f, 0.6f);
+            // Mostrar solo si está descubierta
+            entry.root.gameObject.SetActive(info.discovered);
+
+            if (info.discovered)
+            {
+                // Alternar entre visitada / no visitada
+                if (entry.visited) entry.visited.enabled = info.visited;
+                if (entry.unvisited) entry.unvisited.enabled = !info.visited;
+            }
         }
     }
 
     void HandlePlayerEntered(Vector2Int cell)
     {
         var offset = ComputeCurrentOffset();
-        if (!playerIcon && playerIconPrefab) playerIcon = Instantiate(playerIconPrefab, container);
-        if (playerIcon) playerIcon.rectTransform.anchoredPosition = GridToUI(cell, offset);
-        if (icons.TryGetValue(cell, out var img) && img) img.enabled = true;
+
+        if (!playerIcon && playerIconPrefab)
+            playerIcon = Instantiate(playerIconPrefab, container);
+
+        if (playerIcon)
+            playerIcon.rectTransform.anchoredPosition = GridToUI(cell, offset);
+
+        // Al entrar, la sala queda al menos descubierta/visible
+        if (icons.TryGetValue(cell, out var entry) && entry != null)
+        {
+            entry.root.gameObject.SetActive(true);
+            if (entry.unvisited) entry.unvisited.enabled = false;
+            if (entry.visited) entry.visited.enabled = true;
+        }
     }
 
     Vector2 GridToUI(Vector2Int cell, Vector2 offset)
@@ -168,10 +253,11 @@ public class MinimapUI : MonoBehaviour
 
     Vector2 ComputeCurrentOffset()
     {
+        // Usa la primera entrada para recuperar el offset actual
         foreach (var kv in icons)
         {
             var cell = kv.Key;
-            var pos = kv.Value.rectTransform.anchoredPosition;
+            var pos = kv.Value.root.anchoredPosition;
             return pos - new Vector2(cell.x * cellSize, cell.y * cellSize);
         }
         return manualOffset;

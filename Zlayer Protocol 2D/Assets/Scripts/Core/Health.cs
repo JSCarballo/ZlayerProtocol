@@ -13,7 +13,7 @@ public class Health : MonoBehaviour
     public bool invincible = false;
 
     public event Action OnDeath;
-    public event Action<float> OnDamaged; // ← NUEVO: notifica cuánto daño recibió
+    public event Action<float> OnDamaged; // notifica cuánto daño recibió
 
     public float MaxHP => maxHP;
     public float CurrentHP => currentHP < 0f ? maxHP : currentHP;
@@ -49,5 +49,12 @@ public class Health : MonoBehaviour
             OnDeath?.Invoke();
             if (destroyOnDeath) Destroy(gameObject);
         }
+    }
+
+    /// Carga directa de estado sin disparar eventos (no spawnea números de daño)
+    public void LoadState(float newCurrent, float newMax)
+    {
+        maxHP = Mathf.Max(1f, newMax);
+        currentHP = Mathf.Clamp(newCurrent, 0f, maxHP);
     }
 }

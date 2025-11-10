@@ -13,22 +13,18 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade 3
   m_EditorClassIdentifier: 
   displayName: Dual Shock
-  description: 'DMG +40%
+  description: 'DMG x2
 
-    id: UP_DMG_40
 
-    displayName: Dual Shock
+    Multiply Damage by using Dual Shock
 
-    upgrade:
-    DamageMult, amount = 1.4
-
-    unique = true, weight = 0.9'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0
   addBulletSpeed: 0
   addMaxBounces: 0
-  mulDamage: 4
+  mulDamage: 2
   mulFireRate: 1
   mulBulletSpeed: 1
   enablePiercing: 0

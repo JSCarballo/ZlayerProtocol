@@ -19,7 +19,7 @@ MonoBehaviour:
   branchChance: 0.35
   bossIsExtra: 1
   armoryIsExtra: 1
-  enemyMin: 5
+  enemyMin: 6
   enemyMax: 8
   isArenaFloor: 0
   arenaWaves: 3
@@ -35,4 +35,4 @@ MonoBehaviour:
   elevatorExitPrefab: {fileID: 2311541883464266066, guid: 6651c0b0424cef642a7d7bd656fcff71, type: 3}
   roomWorldSpacing: {x: 16, y: 9}
   defaultRoomPrefab: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}
-  overrideStartRoomPrefab: {fileID: 0}
+  overrideStartRoomPrefab: {fileID: 2817888966593805637, guid: 5edbaeb1b149a20458aed0581cee70b6, type: 3}

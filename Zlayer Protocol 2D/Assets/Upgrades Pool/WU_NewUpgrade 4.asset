@@ -15,14 +15,10 @@ MonoBehaviour:
   displayName: Armor-Piercing Tips
   description: 'Piercing
 
-    id: UP_PIERCING
 
-    displayName: Armor-Piercing Tips
+    Now your bullets can Pierce through Flesh
 
-    upgrade:
-    Piercing, amount = 1
-
-    unique = true, weight = 0.7'
+'
   icon: {fileID: 0}
   addDamage: 0
   addFireRate: 0

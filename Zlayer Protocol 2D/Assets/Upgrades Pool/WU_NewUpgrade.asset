@@ -13,22 +13,18 @@ MonoBehaviour:
   m_Name: WU_NewUpgrade
   m_EditorClassIdentifier: 
   displayName: Hollow-Point Rounds
-  description: 'DMG +20%
+  description: 'DMG +1
 
-    id: UP_DMG_20
 
-    displayName: Hollow-Point Rounds
+    Adds Damage by using Hollow-Point Rounds
 
-    upgrade:
-    DamageMult, amount = 1.2
-
-    unique = true, weight = 1.0'
+'
   icon: {fileID: 0}
-  addDamage: 0
+  addDamage: 1
   addFireRate: 0
   addBulletSpeed: 0
   addMaxBounces: 0
-  mulDamage: 2
+  mulDamage: 1
   mulFireRate: 1
   mulBulletSpeed: 1
   enablePiercing: 0

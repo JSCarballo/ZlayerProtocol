@@ -9,23 +9,47 @@ public class RoomBuilder : MonoBehaviour
     public Tilemap floorMap;
     public Tilemap wallsMap;
 
-    [Header("Floor tiles")]
-    public TileBase floorTile;                 // relleno del piso
-    [Tooltip("Opcional: borde de piso cuando hay pared al Norte/Sur/Este/Oeste")]
+    // =======================
+    //  FLOOR: Mezcla de 3 tiles
+    // =======================
+    [Header("Floor mix (3 tiles con pesos)")]
+    public TileBase floorA;                 // tile 1
+    public TileBase floorB;                 // tile 2
+    public TileBase floorC;                 // tile 3
+    [Range(0f, 1f)] public float weightA = 0.65f;
+    [Range(0f, 1f)] public float weightB = 0.25f;
+    [Range(0f, 1f)] public float weightC = 0.10f;
+
+    [Tooltip("Usa Perlin/Value noise para generar parches (no ruido pixel a pixel).")]
+    public bool usePerlin = true;
+    [Tooltip("Frecuencia del ruido (menor → parches más grandes).")]
+    [Range(0.02f, 2f)] public float noiseScale = 0.18f;
+    [Tooltip("Semilla para mezcla determinística por habitación.")]
+    public int noiseSeed = 1337;
+
+    [Header("Floor fallback (opcional si falta alguno de A/B/C)")]
+    public TileBase floorFallback;
+
+    // =======================
+    //  FLOOR EDGES / CAPS
+    // =======================
+    [Header("Floor edges (opcional)")]
     public TileBase floorEdgeN, floorEdgeS, floorEdgeE, floorEdgeW;
 
     [Header("Floor Edge Caps (terminaciones opcionales)")]
-    public TileBase floorEdgeN_LeftCap;   // remate del tramo Norte, extremo izquierdo
-    public TileBase floorEdgeN_RightCap;  // remate del tramo Norte, extremo derecho
-    public TileBase floorEdgeS_LeftCap;   // remate del tramo Sur, extremo izquierdo
-    public TileBase floorEdgeS_RightCap;  // remate del tramo Sur, extremo derecho
-    public TileBase floorEdgeE_TopCap;    // remate del tramo Este, extremo superior
-    public TileBase floorEdgeE_BottomCap; // remate del tramo Este, extremo inferior
-    public TileBase floorEdgeW_TopCap;    // remate del tramo Oeste, extremo superior
-    public TileBase floorEdgeW_BottomCap; // remate del tramo Oeste, extremo inferior
+    public TileBase floorEdgeN_LeftCap;
+    public TileBase floorEdgeN_RightCap;
+    public TileBase floorEdgeS_LeftCap;
+    public TileBase floorEdgeS_RightCap;
+    public TileBase floorEdgeE_TopCap;
+    public TileBase floorEdgeE_BottomCap;
+    public TileBase floorEdgeW_TopCap;
+    public TileBase floorEdgeW_BottomCap;
 
+    // =======================
+    //  WALLS / PUERTAS
+    // =======================
     [Header("Walls – Fallback genéricos")]
-    [Tooltip("Se usan si en la secuencia no hay tile para esa posición.")]
     public TileBase wallH;   // tramo horizontal (arriba/abajo)
     public TileBase wallV;   // tramo vertical (izquierda/derecha)
 
@@ -33,13 +57,9 @@ public class RoomBuilder : MonoBehaviour
     public TileBase wallCornerNW, wallCornerNE, wallCornerSE, wallCornerSW;
 
     [Header("Walls – Secuencias personalizables (excluyen esquinas de sala)")]
-    [Tooltip("Fila superior, de izquierda a derecha, SIN incluir las esquinas.")]
     public List<TileBase> topEdge = new();
-    [Tooltip("Fila inferior, de izquierda a derecha, SIN incluir las esquinas.")]
     public List<TileBase> bottomEdge = new();
-    [Tooltip("Columna izquierda, de arriba a abajo, SIN incluir las esquinas.")]
     public List<TileBase> leftEdge = new();
-    [Tooltip("Columna derecha, de arriba a abajo, SIN incluir las esquinas.")]
     public List<TileBase> rightEdge = new();
 
     public enum SeqFit { Repeat, Clamp, Stretch }
@@ -51,33 +71,45 @@ public class RoomBuilder : MonoBehaviour
     public TileBase thresholdV;                // umbral vertical (E/W)
 
     [Header("Walls – Esquinas de PUERTA (JAMBAS)")]
-    [Tooltip("Norte: esquina izquierda del hueco (x = midX-2, y = yMax)")]
     public TileBase doorNorthLeftCorner;   // N_L
-    [Tooltip("Norte: esquina derecha del hueco (x = midX+2, y = yMax)")]
     public TileBase doorNorthRightCorner;  // N_R
-    [Tooltip("Sur: esquina izquierda del hueco (x = midX-2, y = 0)")]
     public TileBase doorSouthLeftCorner;   // S_L
-    [Tooltip("Sur: esquina derecha del hueco (x = midX+2, y = 0)")]
     public TileBase doorSouthRightCorner;  // S_R
-
-    [Tooltip("Este: esquina superior del hueco (x = xMax, y = midY+2)")]
     public TileBase doorEastTopCorner;     // E_T
-    [Tooltip("Este: esquina inferior del hueco (x = xMax, y = midY-2)")]
     public TileBase doorEastBottomCorner;  // E_B
-    [Tooltip("Oeste: esquina superior del hueco (x = 0, y = midY+2)")]
     public TileBase doorWestTopCorner;     // W_T
-    [Tooltip("Oeste: esquina inferior del hueco (x = 0, y = midY-2)")]
     public TileBase doorWestBottomCorner;  // W_B
 
+    // =======================
+    //  LUZ CENTRAL
+    // =======================
+    [Header("Luz central (SpriteRenderer)")]
+    public bool enableCenterLight = true;
+    [Tooltip("Sprite con gradiente circular suave (un 'soft circle').")]
+    public Sprite centerLightSprite;
+    [Tooltip("Material para la luz (recomendado ADITIVO). Se instancia en runtime.")]
+    public Material centerLightMaterial;
+    [Tooltip("Tamaño de la luz en unidades mundo.")]
+    public Vector2 centerLightWorldSize = new Vector2(6f, 6f);
+    [Tooltip("Color cuando la sala está abierta.")]
+    public Color lightOpenColor = Color.white;
+    [Tooltip("Color cuando la sala está cerrada.")]
+    public Color lightClosedColor = new Color(1f, 0.2f, 0.2f, 1f);
+    [Tooltip("Offset vertical opcional (para alejarla del HUD).")]
+    public float centerLightYOffset = 0f;
+    [Tooltip("Orden de render (sobre el piso, bajo personajes).")]
+    public int centerLightSortingOrderOffset = +1;
+
+    // =======================
+    //  GEOMETRÍA / CONEXIONES
+    // =======================
     [Header("Geometry")]
     public Vector2Int roomSizeTiles = new(16, 10); // ancho x alto (tiles)
 
-    // conexiones (marcadas por el generador)
     [HideInInspector] public bool north, south, east, west;
 
     public Bounds RoomBounds { get; private set; }
 
-    // ==== Anclas para puertas (centro + tamaño en mundo)
     public struct DoorSpawn
     {
         public Vector3 center;
@@ -85,37 +117,40 @@ public class RoomBuilder : MonoBehaviour
         public DoorSpawn(Vector3 c, Vector2 s) { center = c; size = s; }
     }
 
+    // Runtime: luz + estado
+    SpriteRenderer _centerLightSR;
+    bool _lightClosed = false;
+    static readonly int _ColorProp = Shader.PropertyToID("_Color");
+
     // ---------------- Build ----------------
     public void Build()
     {
         floorMap.ClearAllTiles();
         wallsMap.ClearAllTiles();
 
-        // 1) Piso base
-        for (int y = 0; y < roomSizeTiles.y; y++)
-            for (int x = 0; x < roomSizeTiles.x; x++)
-                floorMap.SetTile(new Vector3Int(x, y, 0), floorTile);
+        // 1) Piso base (mezcla de 3 tiles)
+        FillFloorMixed();
 
-        // 2) Pared perimetral (esquinas de sala + secuencias personalizadas)
+        // 2) Pared perimetral
         PlacePerimeterWallsCustom();
 
-        // 3) Abrimos huecos de puerta (3 tiles de ancho/alto)
+        // 3) Huecos de puerta
         CarveDoorways();
 
-        // 4) Thresholds (suelo rojo en los huecos)
+        // 4) Thresholds
         PlaceThresholds();
 
-        // 5) JAMBAS: esquinas de puerta en extremos del hueco
+        // 5) Jambas (esquinas de puerta)
         PlaceDoorJambCorners();
 
-        // 6) Borde de piso junto a paredes (con caps)
+        // 6) Borde de piso + caps
         DecorateFloorEdges();
 
         // 7) FIX específicos bajo jambas superiores West/East
         ApplyWestTopBelowSpecialCap(); // usa floorEdgeN_RightCap
         ApplyEastTopBelowSpecialCap(); // usa floorEdgeN_LeftCap
 
-        // 8) Bounds fiables
+        // 8) Bounds
         floorMap.CompressBounds();
         wallsMap.CompressBounds();
         var fr = floorMap.GetComponent<TilemapRenderer>();
@@ -124,14 +159,76 @@ public class RoomBuilder : MonoBehaviour
         if (wr) b.Encapsulate(wr.bounds);
         RoomBounds = b;
 
-        // 9) Trigger sala al rectángulo
+        // 9) Trigger sala
         var trigger = GetComponent<BoxCollider2D>();
         trigger.isTrigger = true;
         trigger.offset = transform.InverseTransformPoint(RoomBounds.center);
         trigger.size = RoomBounds.size;
+
+        // 10) Luz central (inicia en color abierto)
+        EnsureCenterLight();
+        _lightClosed = false;
+        UpdateCenterLightVisual();
     }
 
-    // ----- Pared con secuencias personalizables -----
+    void OnValidate()
+    {
+        // Refresca la luz cuando cambias colores en el inspector
+        if (Application.isPlaying && _centerLightSR != null)
+            UpdateCenterLightVisual();
+    }
+
+    // =======================
+    //  Piso mixto (3 tiles)
+    // =======================
+    void FillFloorMixed()
+    {
+        // Si falta alguno, usa fallback único
+        if (floorA == null || floorB == null || floorC == null)
+        {
+            var t = floorA ?? floorB ?? floorC ?? floorFallback;
+            if (t == null) return;
+            for (int y = 0; y < roomSizeTiles.y; y++)
+                for (int x = 0; x < roomSizeTiles.x; x++)
+                    floorMap.SetTile(new Vector3Int(x, y, 0), t);
+            return;
+        }
+
+        // Normalizamos pesos
+        float sum = Mathf.Max(0.0001f, weightA + weightB + weightC);
+        float pA = weightA / sum;
+        float pB = weightB / sum;
+
+        float ox = (noiseSeed * 0.1234f) % 1000f;
+        float oy = (noiseSeed * 0.5678f) % 1000f;
+
+        for (int y = 0; y < roomSizeTiles.y; y++)
+        {
+            for (int x = 0; x < roomSizeTiles.x; x++)
+            {
+                float r;
+                if (usePerlin)
+                {
+                    float nx = (x + ox) * noiseScale;
+                    float ny = (y + oy) * noiseScale;
+                    r = Mathf.PerlinNoise(nx, ny);
+                }
+                else
+                {
+                    uint h = (uint)(x * 374761393 + y * 668265263) ^ (uint)noiseSeed;
+                    h = (h ^ (h >> 13)) * 1274126177;
+                    r = ((h ^ (h >> 16)) & 0xFFFFFF) / (float)0x1000000;
+                }
+
+                TileBase pick = (r < pA) ? floorA : (r < pA + pB ? floorB : floorC);
+                floorMap.SetTile(new Vector3Int(x, y, 0), pick);
+            }
+        }
+    }
+
+    // =======================
+    //  Pared con secuencias
+    // =======================
     void PlacePerimeterWallsCustom()
     {
         int xMax = roomSizeTiles.x - 1;
@@ -190,7 +287,9 @@ public class RoomBuilder : MonoBehaviour
         return seq[index % len];
     }
 
-    // ----- Huecos de puerta (3 tiles) -----
+    // =======================
+    //  Huecos y thresholds
+    // =======================
     void CarveDoorways()
     {
         int midX = roomSizeTiles.x / 2;
@@ -213,7 +312,6 @@ public class RoomBuilder : MonoBehaviour
                 wallsMap.SetTile(new Vector3Int(0, midY + dy, 0), null);
     }
 
-    // ----- Thresholds (suelo rojo) en huecos -----
     void PlaceThresholds()
     {
         int midX = roomSizeTiles.x / 2;
@@ -236,7 +334,9 @@ public class RoomBuilder : MonoBehaviour
                 floorMap.SetTile(new Vector3Int(0, midY + dy, 0), thresholdV);
     }
 
-    // ----- JAMBAS: esquinas de puerta en extremos del hueco -----
+    // =======================
+    //  Jambas (esquinas puerta)
+    // =======================
     void PlaceDoorJambCorners()
     {
         int xMax = roomSizeTiles.x - 1;
@@ -244,48 +344,46 @@ public class RoomBuilder : MonoBehaviour
         int midX = roomSizeTiles.x / 2;
         int midY = roomSizeTiles.y / 2;
 
-        // Norte (fila yMax): extremos en x = midX-2 y midX+2
         if (north && yMax >= 0)
         {
             int y = yMax;
             int xl = Mathf.Clamp(midX - 2, 1, xMax - 1);
             int xr = Mathf.Clamp(midX + 2, 1, xMax - 1);
-            if (doorNorthLeftCorner) wallsMap.SetTile(new Vector3Int(xl, y, 0), doorNorthLeftCorner);   // N_L
-            if (doorNorthRightCorner) wallsMap.SetTile(new Vector3Int(xr, y, 0), doorNorthRightCorner);  // N_R
+            if (doorNorthLeftCorner) wallsMap.SetTile(new Vector3Int(xl, y, 0), doorNorthLeftCorner);
+            if (doorNorthRightCorner) wallsMap.SetTile(new Vector3Int(xr, y, 0), doorNorthRightCorner);
         }
 
-        // Sur (fila 0): extremos en x = midX-2 y midX+2
         if (south)
         {
             int y = 0;
             int xl = Mathf.Clamp(midX - 2, 1, xMax - 1);
             int xr = Mathf.Clamp(midX + 2, 1, xMax - 1);
-            if (doorSouthLeftCorner) wallsMap.SetTile(new Vector3Int(xl, y, 0), doorSouthLeftCorner);   // S_L
-            if (doorSouthRightCorner) wallsMap.SetTile(new Vector3Int(xr, y, 0), doorSouthRightCorner);  // S_R
+            if (doorSouthLeftCorner) wallsMap.SetTile(new Vector3Int(xl, y, 0), doorSouthLeftCorner);
+            if (doorSouthRightCorner) wallsMap.SetTile(new Vector3Int(xr, y, 0), doorSouthRightCorner);
         }
 
-        // Este (columna xMax): extremos en y = midY+2 (arriba) y midY-2 (abajo)
         if (east && xMax >= 0)
         {
             int x = xMax;
             int yt = Mathf.Clamp(midY + 2, 1, yMax - 1);
             int yb = Mathf.Clamp(midY - 2, 1, yMax - 1);
-            if (doorEastTopCorner) wallsMap.SetTile(new Vector3Int(x, yt, 0), doorEastTopCorner);     // E_T
-            if (doorEastBottomCorner) wallsMap.SetTile(new Vector3Int(x, yb, 0), doorEastBottomCorner);  // E_B
+            if (doorEastTopCorner) wallsMap.SetTile(new Vector3Int(x, yt, 0), doorEastTopCorner);
+            if (doorEastBottomCorner) wallsMap.SetTile(new Vector3Int(x, yb, 0), doorEastBottomCorner);
         }
 
-        // Oeste (columna 0): extremos en y = midY+2 y midY-2
         if (west)
         {
             int x = 0;
             int yt = Mathf.Clamp(midY + 2, 1, yMax - 1);
             int yb = Mathf.Clamp(midY - 2, 1, yMax - 1);
-            if (doorWestTopCorner) wallsMap.SetTile(new Vector3Int(x, yt, 0), doorWestTopCorner);     // W_T
-            if (doorWestBottomCorner) wallsMap.SetTile(new Vector3Int(x, yb, 0), doorWestBottomCorner);  // W_B
+            if (doorWestTopCorner) wallsMap.SetTile(new Vector3Int(x, yt, 0), doorWestTopCorner);
+            if (doorWestBottomCorner) wallsMap.SetTile(new Vector3Int(x, yb, 0), doorWestBottomCorner);
         }
     }
 
-    // ----- Borde de piso con caps (detección por línea) -----
+    // =======================
+    //  Floor edges con caps
+    // =======================
     void DecorateFloorEdges()
     {
         bool any =
@@ -300,7 +398,7 @@ public class RoomBuilder : MonoBehaviour
         int xMax = roomSizeTiles.x - 1;
         int yMax = roomSizeTiles.y - 1;
 
-        // Norte (fila justo debajo del muro superior)
+        // Norte
         int yN = Mathf.Max(0, yMax - 1);
         for (int x = 1; x <= xMax - 1; x++)
         {
@@ -322,7 +420,7 @@ public class RoomBuilder : MonoBehaviour
             if (edge) floorMap.SetTile(cell, edge);
         }
 
-        // Sur (fila justo encima del muro inferior)
+        // Sur
         int yS = 1;
         if (yMax >= 1)
         {
@@ -347,7 +445,7 @@ public class RoomBuilder : MonoBehaviour
             }
         }
 
-        // Este (columna inmediatamente a la izquierda del muro derecho)
+        // Este
         int xE = Mathf.Max(0, xMax - 1);
         for (int y = 2; y <= yMax - 2; y++)
         {
@@ -369,7 +467,7 @@ public class RoomBuilder : MonoBehaviour
             if (edge) floorMap.SetTile(cell, edge);
         }
 
-        // Oeste (columna inmediatamente a la derecha del muro izquierdo)
+        // Oeste
         int xW = 1;
         if (xMax >= 1)
         {
@@ -395,35 +493,94 @@ public class RoomBuilder : MonoBehaviour
         }
     }
 
-    // --- FIX 1: bajo Door West Top Corner usar Floor Edge N Right Cap ---
+    // =======================
+    //  FIX jambas superiores
+    // =======================
     void ApplyWestTopBelowSpecialCap()
     {
         if (!west || floorEdgeN_RightCap == null) return;
-
         int yMax = roomSizeTiles.y - 1;
         int midY = roomSizeTiles.y / 2;
-
-        // Door West Top Corner en (x=0, y=midY+2) → debajo: (0, midY+1)
-        int x = 0;
-        int y = Mathf.Clamp(midY + 1, 0, yMax);
-        floorMap.SetTile(new Vector3Int(x, y, 0), floorEdgeN_RightCap);
+        floorMap.SetTile(new Vector3Int(0, Mathf.Clamp(midY + 1, 0, yMax), 0), floorEdgeN_RightCap);
     }
 
-    // --- FIX 2: bajo Door East Top Corner usar Floor Edge N Left Cap ---
     void ApplyEastTopBelowSpecialCap()
     {
         if (!east || floorEdgeN_LeftCap == null) return;
-
         int xMax = roomSizeTiles.x - 1;
         int yMax = roomSizeTiles.y - 1;
         int midY = roomSizeTiles.y / 2;
-
-        // Door East Top Corner en (x=xMax, y=midY+2) → debajo: (xMax, midY+1)
-        int x = xMax;
-        int y = Mathf.Clamp(midY + 1, 0, yMax);
-        floorMap.SetTile(new Vector3Int(x, y, 0), floorEdgeN_LeftCap);
+        floorMap.SetTile(new Vector3Int(xMax, Mathf.Clamp(midY + 1, 0, yMax), 0), floorEdgeN_LeftCap);
     }
 
+    // =======================
+    //  LUZ CENTRAL
+    // =======================
+    void EnsureCenterLight()
+    {
+        if (!enableCenterLight || centerLightSprite == null) return;
+
+        if (_centerLightSR == null)
+        {
+            var go = new GameObject("CenterLight");
+            go.transform.SetParent(transform, false);
+            _centerLightSR = go.AddComponent<SpriteRenderer>();
+            // NO asignamos un material nuevo aquí: usaremos el que ya traiga el renderer
+            // (Unity asigna por defecto el material de Sprites si no hay uno específico).
+        }
+
+        _centerLightSR.sprite = centerLightSprite;
+
+        // Sorting por encima del piso
+        var fr = floorMap ? floorMap.GetComponent<TilemapRenderer>() : null;
+        if (fr)
+        {
+            _centerLightSR.sortingLayerID = fr.sortingLayerID;
+            _centerLightSR.sortingOrder = fr.sortingOrder + centerLightSortingOrderOffset;
+        }
+
+        // Posición y escala a RoomBounds
+        Vector3 c = RoomBounds.center + new Vector3(0f, centerLightYOffset, 0f);
+        _centerLightSR.transform.position = c;
+
+        var spSize = _centerLightSR.sprite.bounds.size;
+        float sx = centerLightWorldSize.x / Mathf.Max(0.0001f, spSize.x);
+        float sy = centerLightWorldSize.y / Mathf.Max(0.0001f, spSize.y);
+        _centerLightSR.transform.localScale = new Vector3(sx, sy, 1f);
+    }
+
+    void UpdateCenterLightVisual()
+    {
+        if (!enableCenterLight || _centerLightSR == null) return;
+
+        Color c = _lightClosed ? lightClosedColor : lightOpenColor;
+
+        // 1) Color del SpriteRenderer (sirve para Sprites/Default)
+        _centerLightSR.color = c;
+
+        // 2) También intentamos escribir en el material ya asignado al renderer
+        //    (URP usa _BaseColor; Sprites/Default usa _Color; otros shaders pueden usar _TintColor / _EmissionColor)
+        var mat = _centerLightSR.material; // material de instancia en este renderer
+        if (mat != null)
+        {
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", c);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", c);
+            if (mat.HasProperty("_TintColor")) mat.SetColor("_TintColor", c);
+            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", c);
+        }
+    }
+
+    /// Llama esto desde RoomRuntime cuando las puertas se cierran/abren.
+    /// 'true' = rojo (cerrado), 'false' = abierto (blanco u otro que definas).
+    public void SetCenterLightClosed(bool closed)
+    {
+        _lightClosed = closed;
+        UpdateCenterLightVisual();
+    }
+
+    // =======================
+    //  Utilidades
+    // =======================
     bool IsThresholdCell(Vector3Int cell)
     {
         var t = floorMap.GetTile(cell);
@@ -439,14 +596,12 @@ public class RoomBuilder : MonoBehaviour
 
     public Vector2 GetCellSize() => wallsMap.layoutGrid.cellSize;
 
-    // ==== Anclas (centro y tamaño en mundo) para colocar barreras/puertas ====
     public IEnumerable<DoorSpawn> GetDoorSpawns()
     {
         var cs = GetCellSize();
         int midX = roomSizeTiles.x / 2;
         int midY = roomSizeTiles.y / 2;
 
-        // Norte / Sur: hueco horizontal 3x1
         if (north)
         {
             Vector3 c = CellCenterWorld(midX, roomSizeTiles.y - 1);
@@ -458,7 +613,6 @@ public class RoomBuilder : MonoBehaviour
             yield return new DoorSpawn(c, new Vector2(cs.x * 3f, cs.y * 1f));
         }
 
-        // Este / Oeste: hueco vertical 1x3
         if (east)
         {
             Vector3 c = CellCenterWorld(roomSizeTiles.x - 1, midY);

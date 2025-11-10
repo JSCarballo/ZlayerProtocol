@@ -1,15 +1,29 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Tilemaps;
 
 [RequireComponent(typeof(RoomBuilder))]
 [RequireComponent(typeof(BoxCollider2D))]
 public class RoomRuntime : MonoBehaviour
 {
-    // ---------- Foco inicial de cámara por piso ----------
+    // ---------- Estado estático por piso ----------
     static bool s_InitialFocusDone = false;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void ResetInitialFocusFlag() => s_InitialFocusDone = false;
+
+    // Puntero a la StartRoom más reciente
+    public static RoomRuntime LastStartRoom { get; private set; } = null;
+
+    // Evento: avisamos cuando se marca la Start Room durante la generación
+    public static event System.Action<RoomRuntime> OnStartRoomMarked;
+
+    /// <summary>Resetea punteros/flags para un nuevo piso en la MISMA escena.</summary>
+    public static void ResetStartPointerForNewFloor()
+    {
+        LastStartRoom = null;
+        s_InitialFocusDone = false;
+    }
 
     [Header("Spawning (enemigos)")]
     public GameObject enemyPrefab;
@@ -20,6 +34,16 @@ public class RoomRuntime : MonoBehaviour
     public float doorThickness = 0.5f;
     public float doorPadding = 0.1f;
     public float doorInset = 0.05f;
+
+    [Header("Puertas – Sprites visuales")]
+    [Tooltip("Sprite para puertas horizontales (N/S) – visual más ALTO para dar perspectiva.")]
+    public Sprite doorSpriteHorizontal;
+    [Tooltip("Sprite para puertas verticales (E/W). Opcional.")]
+    public Sprite doorSpriteVertical;
+    [Tooltip("Multiplicador de altura visual SOLO para horizontales (no afecta al collider).")]
+    public float doorH_VisualHeightMul = 2.0f;
+    [Tooltip("Offset de sorting order respecto al floor para que la puerta quede por encima.")]
+    public int doorSortingOrderOffset = +5;
 
     [Header("Transición de cámara")]
     public bool enableCamTransition = true;
@@ -72,7 +96,21 @@ public class RoomRuntime : MonoBehaviour
     public int arenaWaveMax = 10;
     public float arenaInterval = 1.0f;
 
-    [HideInInspector] public Vector2Int gridCell;
+    // ---------- Overlay de color al cerrar puertas ----------
+    [Header("Overlay de color al cerrar puertas")]
+    public bool useRoomOverlay = true;
+    [Tooltip("Sprite plano/gradiente. Si se deja vacío, se genera uno 1x1 blanco.")]
+    public Sprite overlaySprite;
+    [Tooltip("Material del overlay (recomendado multiplicativo/aditivo para efecto de filtro).")]
+    public Material overlayMaterial;
+    [Tooltip("Color cuando la sala está ABIERTA (normalmente transparente).")]
+    public Color overlayOpenColor = new Color(1f, 1f, 1f, 0f);
+    [Tooltip("Color cuando la sala está CERRADA (tinte rojo por defecto).")]
+    public Color overlayClosedColor = new Color(1f, 0f, 0f, 0.22f);
+    [Tooltip("Escala extra relativa a RoomBounds para cubrir con holgura todo el cuarto.")]
+    [Range(1f, 1.8f)] public float overlayExtraScale = 1.1f;
+    [Tooltip("Offset de sorting order respecto al piso (grande para estar encima de TODO).")]
+    public int overlaySortingOrderOffset = 1000;
 
     RoomBuilder builder;
     BoxCollider2D triggerCol;
@@ -96,6 +134,10 @@ public class RoomRuntime : MonoBehaviour
     int wavesLeft = 0;
     Vector3 lastEntryPos;
 
+    // Overlay runtime
+    SpriteRenderer overlaySR;
+    static readonly int _ColorProp = Shader.PropertyToID("_Color");
+
     void Awake()
     {
         builder = GetComponent<RoomBuilder>();
@@ -112,6 +154,10 @@ public class RoomRuntime : MonoBehaviour
             triggerCol = GetComponent<BoxCollider2D>();
         }
         if (builder && triggerCol) EnsureTriggerCollider();
+
+        // Refrescar overlay en Play al cambiar colores en el inspector
+        if (Application.isPlaying && overlaySR != null)
+            ApplyOverlayColor(false); // no forzar re-escala
     }
 
     void EnsureTriggerCollider()
@@ -156,6 +202,7 @@ public class RoomRuntime : MonoBehaviour
         isStartRoom = true;
         visited = true;
 
+        // Matar enemigos que hayan quedado dentro por error
         var enemies = Object.FindObjectsByType<EnemyChaseAI>(FindObjectsSortMode.None);
         foreach (var e in enemies)
         {
@@ -166,6 +213,10 @@ public class RoomRuntime : MonoBehaviour
                 else Destroy(e.gameObject);
             }
         }
+
+        // Puntero global + evento (para warp robusto en FloorFlowController)
+        LastStartRoom = this;
+        OnStartRoomMarked?.Invoke(this);
     }
 
     public void ConfigureAsBossRoom(GameObject bossRef)
@@ -296,6 +347,9 @@ public class RoomRuntime : MonoBehaviour
             if (elevatorExitPrefab)
                 Instantiate(elevatorExitPrefab, builder.RoomBounds.center + (Vector3)elevatorOffset, Quaternion.identity);
 
+            // Overlay vuelve a abierto (sin rojo)
+            SetOverlayClosed(false);
+
             arenaActive = false;
             yield break;
         }
@@ -361,7 +415,6 @@ public class RoomRuntime : MonoBehaviour
                 if (armoryChoiceResolved) return;
                 armoryChoiceResolved = true;
 
-                // FIX: castear ScriptableObject -> WeaponUpgradeSO para MarkUsed
                 if (UpgradePoolManager.Instance && so != null)
                 {
                     var wso = so as WeaponUpgradeSO;
@@ -393,6 +446,10 @@ public class RoomRuntime : MonoBehaviour
         if (!doorBarrierPrefab) { Debug.LogWarning("[RoomRuntime] doorBarrierPrefab no asignado."); return; }
 
         spawnedDoors.Clear();
+
+        // Asegurar overlay (lo creamos aquí para que RoomBounds ya esté disponible)
+        EnsureOverlayObject();
+
         foreach (var ds in builder.GetDoorSpawns())
         {
             GetDoorOrientation(builder.RoomBounds, ds.center, ds.size, out bool horizontal, out Vector2 inwardNormal);
@@ -400,37 +457,51 @@ public class RoomRuntime : MonoBehaviour
             Vector3 finalPos = ds.center + (Vector3)(inwardNormal * doorInset);
 
             var go = Instantiate(doorBarrierPrefab, finalPos, Quaternion.identity, transform);
-            go.gameObject.layer = LayerMask.NameToLayer("Walls");
 
-            // Si el prefab tiene Door, dejamos que Door haga todo (sprite + escala + collider)
-            var door = go.GetComponent<Door>();
-            if (door)
-            {
-                door.Configure(horizontal, finalSize, open: false);
-            }
-            else
-            {
-                // Fallback legacy (sin componente Door): intentamos ajustar BoxCollider2D y escalar el sprite actual
-                var box = go.GetComponent<BoxCollider2D>();
-                if (box) box.size = finalSize;
+            // Collider al tamaño real de bloqueo
+            var box = go.GetComponent<BoxCollider2D>();
+            if (box) box.size = finalSize;
 
-                var sr = go.GetComponent<SpriteRenderer>();
-                if (sr && sr.sprite != null)
+            // Sprite visual y escala (ancho encaja; alto aumentado en horizontales)
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr)
+            {
+                // Sorting por encima del piso
+                var fr = builder.floorMap ? builder.floorMap.GetComponent<TilemapRenderer>() : null;
+                if (fr)
                 {
-                    Vector2 spriteSize = sr.sprite.bounds.size; // mundo
+                    sr.sortingLayerID = fr.sortingLayerID;
+                    sr.sortingOrder = fr.sortingOrder + doorSortingOrderOffset;
+                }
+
+                if (horizontal && doorSpriteHorizontal != null)
+                    sr.sprite = doorSpriteHorizontal;
+                else if (!horizontal && doorSpriteVertical != null)
+                    sr.sprite = doorSpriteVertical;
+
+                if (sr.sprite != null)
+                {
+                    Vector2 spSize = sr.sprite.bounds.size;
+                    float width = finalSize.x;
+                    float height = finalSize.y * (horizontal ? Mathf.Max(1f, doorH_VisualHeightMul) : 1f);
+
                     go.transform.localScale = new Vector3(
-                        finalSize.x / Mathf.Max(0.0001f, spriteSize.x),
-                        finalSize.y / Mathf.Max(0.0001f, spriteSize.y),
+                        width / Mathf.Max(0.0001f, spSize.x),
+                        height / Mathf.Max(0.0001f, spSize.y),
                         1f
                     );
                 }
             }
 
+            go.gameObject.layer = LayerMask.NameToLayer("Walls");
             spawnedDoors.Add(go);
         }
+
+        // Activar overlay rojo (cerrado)
+        SetOverlayClosed(true);
     }
 
-    static Vector2 ComputeBarrierSize(Vector2 holeSize, bool horizontal, float thickness, float padding)
+    public static Vector2 ComputeBarrierSize(Vector2 holeSize, bool horizontal, float thickness, float padding)
     {
         if (horizontal)
         {
@@ -446,7 +517,7 @@ public class RoomRuntime : MonoBehaviour
         }
     }
 
-    static void GetDoorOrientation(Bounds room, Vector3 center, Vector2 holeSize, out bool horizontal, out Vector2 inwardNormal)
+    public static void GetDoorOrientation(Bounds room, Vector3 center, Vector2 holeSize, out bool horizontal, out Vector2 inwardNormal)
     {
         horizontal = holeSize.x >= holeSize.y;
         float toTop = Mathf.Abs(room.max.y - center.y);
@@ -536,7 +607,7 @@ public class RoomRuntime : MonoBehaviour
                     if (forbidden[f].Contains(p)) { insideForbidden = true; break; }
             }
             if (insideForbidden) continue;
-            if (Vector2.Distance(playerPos, p) < minSpawnDistFromPlayer) continue;
+            if (Vector2.Distance(playerPos, p) < minDistFromPlayer) continue;
             return p;
         }
         return area.center;
@@ -614,6 +685,9 @@ public class RoomRuntime : MonoBehaviour
 
         foreach (var d in spawnedDoors) if (d) Destroy(d);
         spawnedDoors.Clear();
+
+        // Overlay vuelve a abierto (sin rojo)
+        SetOverlayClosed(false);
 
         foreach (var a in spawnedActors)
         {
@@ -701,5 +775,112 @@ public class RoomRuntime : MonoBehaviour
         float x = Mathf.Clamp(p.x, b.min.x + margin, b.max.x - margin);
         float y = Mathf.Clamp(p.y, b.min.y, b.max.y - margin);
         return new Vector3(x, y, p.z);
+    }
+
+    // ---------- Overlay helpers ----------
+    void EnsureOverlayObject()
+    {
+        if (!useRoomOverlay) return;
+
+        if (overlaySR == null)
+        {
+            var go = new GameObject("RoomOverlay");
+            go.transform.SetParent(transform, false);
+            overlaySR = go.AddComponent<SpriteRenderer>();
+
+            // Material instanciado para poder tocar _Color sin afectar otros overlays
+            if (overlayMaterial != null)
+                overlaySR.material = new Material(overlayMaterial);
+
+            // Sprite por defecto (1x1 blanco) si no asignaste uno
+            if (overlaySprite == null)
+            {
+                var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                tex.SetPixel(0, 0, Color.white);
+                tex.Apply(false, true);
+                overlaySprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1f);
+            }
+            overlaySR.sprite = overlaySprite;
+        }
+
+        // Sorting por encima del piso (y de todo lo demás)
+        var fr = builder.floorMap ? builder.floorMap.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>() : null;
+        if (fr)
+        {
+            overlaySR.sortingLayerID = fr.sortingLayerID;
+            overlaySR.sortingOrder = fr.sortingOrder + overlaySortingOrderOffset;
+        }
+        else
+        {
+            overlaySR.sortingOrder = 10000;
+        }
+
+        // Posición/escala para cubrir el cuarto con holgura
+        var rb = builder.RoomBounds;
+        overlaySR.transform.position = rb.center;
+        var spSize = overlaySR.sprite.bounds.size;
+        float sx = (rb.size.x * overlayExtraScale) / Mathf.Max(0.0001f, spSize.x);
+        float sy = (rb.size.y * overlayExtraScale) / Mathf.Max(0.0001f, spSize.y);
+        overlaySR.transform.localScale = new Vector3(sx, sy, 1f);
+
+        // Al crear, arranca en estado "abierto"
+        ApplyOverlayColor(false);
+    }
+
+    void SetOverlayClosed(bool closed)
+    {
+        if (!useRoomOverlay) return;
+        EnsureOverlayObject();  // por si aún no existe
+        var c = closed ? overlayClosedColor : overlayOpenColor;
+        ApplyOverlayColor(true, c);
+    }
+
+    void ApplyOverlayColor(bool forceRescale, Color? custom = null)
+    {
+        if (!overlaySR) return;
+
+        // Recalcular escala (por si el bounds cambió durante la generación)
+        if (forceRescale)
+        {
+            var rb = builder.RoomBounds;
+            overlaySR.transform.position = rb.center;
+            var spSize = overlaySR.sprite.bounds.size;
+            float sx = (rb.size.x * overlayExtraScale) / Mathf.Max(0.0001f, spSize.x);
+            float sy = (rb.size.y * overlayExtraScale) / Mathf.Max(0.0001f, spSize.y);
+            overlaySR.transform.localScale = new Vector3(sx, sy, 1f);
+        }
+
+        var c = custom ?? overlayOpenColor;
+        overlaySR.color = c;
+
+        var mat = overlaySR.material;
+        if (mat != null && mat.HasProperty(_ColorProp))
+            mat.SetColor(_ColorProp, c);
+    }
+
+    // ---------- Grid / mapa ----------
+    [HideInInspector] public Vector2Int gridCell;
+
+    // ---------- API de spawn recomendado para FloorFlowController ----------
+    /// <summary>
+    /// Punto recomendado para aparecer en esta sala al entrar por elevador/cambio de piso.
+    /// Usa el centro; si hay puertas, empuja ligeramente hacia adentro según la normal.
+    /// </summary>
+    public Vector3 GetRecommendedSpawnPoint(float inset)
+    {
+        var rb = builder.RoomBounds;
+        Vector3 center = rb.center;
+
+        // Si tenemos anclas de puerta, elige la que tiene la normal "hacia adentro" y desplaza un poco
+        RoomBuilder.DoorSpawn? any = null;
+        foreach (var ds in builder.GetDoorSpawns()) { any = ds; break; }
+
+        if (any.HasValue)
+        {
+            GetDoorOrientation(rb, any.Value.center, any.Value.size, out bool horizontal, out Vector2 inward);
+            return any.Value.center + (Vector3)(inward * Mathf.Max(0f, inset));
+        }
+
+        return center;
     }
 }

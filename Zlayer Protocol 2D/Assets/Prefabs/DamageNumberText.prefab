@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2506126765511093352}
   - component: {fileID: 7072521885246260050}
   - component: {fileID: 5978141804448175638}
-  - component: {fileID: 8706312451924056151}
+  - component: {fileID: 3896958681472862027}
   m_Layer: 5
   m_Name: DamageNumberText
   m_TagString: Untagged
@@ -137,7 +137,7 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &8706312451924056151
+--- !u!114 &3896958681472862027
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -150,6 +150,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   text: {fileID: 5978141804448175638}
+  targetCanvas: {fileID: 0}
+  overrideCanvasSorting: 1
+  sortingLayerName: UI
+  sortingOrder: 500
   lifetime: 0.75
   move: {x: 0, y: 60}
   randomJitter: {x: 20, y: 0}
@@ -202,7 +206,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   normalColor: {r: 1, g: 1, b: 1, a: 1}
-  bossColor: {r: 1, g: 0.35, b: 0.2, a: 1}
+  bossColor: {r: 1, g: 1, b: 1, a: 1}
   bossScaleMultiplier: 1.35
-  bossShakeAmplitude: 8
-  bossShakeFrequency: 35
+  bossShakeAmplitude: 5
+  bossShakeFrequency: 20
