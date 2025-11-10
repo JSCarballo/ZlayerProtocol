@@ -1,47 +1,32 @@
-// Assets/Scripts/Floors/ElevatorExit.cs
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
 public class ElevatorExit : MonoBehaviour
 {
-    [Header("Trigger")]
-    public string playerTag = "Player";
-    public bool autoTriggerOnTouch = true;
-    public float triggerDelay = 0.35f;
-    public bool lockPlayerOnUse = true;
-
-    bool used = false;
-
-    void Reset()
-    {
-        var col = GetComponent<Collider2D>();
-        if (col) col.isTrigger = true;
-        if (gameObject.tag == "Untagged") gameObject.tag = "Elevator";
-    }
+    [Tooltip("Si es true, auto-consume al jugador al entrar sin botón extra.")]
+    public bool autoTriggerOnEnter = true;
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (!autoTriggerOnTouch || used) return;
-        if (!other.CompareTag(playerTag)) return;
-        used = true;
-        StartCoroutine(UseRoutine(other.transform));
+        if (!autoTriggerOnEnter) return;
+        if (!other.CompareTag("Player")) return;
+
+        TryLeaveFloor();
     }
 
-    System.Collections.IEnumerator UseRoutine(Transform player)
+    // Si prefieres usar UI/botón, llama a esto desde un botón:
+    public void UI_OnEnterElevator()
     {
-        if (lockPlayerOnUse && player)
+        TryLeaveFloor();
+    }
+
+    void TryLeaveFloor()
+    {
+        if (!FloorFlowController.Instance)
         {
-            var locker = player.GetComponent<PlayerControlLocker>();
-            if (locker) locker.HardLock();
-            var rb = player.GetComponent<Rigidbody2D>();
-            if (rb) rb.linearVelocity = Vector2.zero;
+            Debug.LogWarning("[ElevatorExit] No existe FloorFlowController en escena.");
+            return;
         }
-
-        yield return new WaitForSeconds(triggerDelay);
-
-        if (FloorFlowController.Instance)
-            FloorFlowController.Instance.NextFloor();
-        else
-            Debug.LogWarning("[ElevatorExit] No hay FloorFlowController en escena.");
+        FloorFlowController.Instance.UI_EnterElevator_AndLoadNextFloor();
     }
 }

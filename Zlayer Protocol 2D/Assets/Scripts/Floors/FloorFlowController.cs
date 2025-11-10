@@ -17,17 +17,24 @@ public class FloorFlowController : MonoBehaviour
         (sequence && currentIndex >= 0 && currentIndex < sequence.floors.Count) ? sequence.floors[currentIndex] : null;
 
     [Header("Spawn en Start Room")]
-    [Tooltip("Margen para clamping interno; solo seguridad al colocar en el centro.")]
+    [Tooltip("Margen para clamping interno; seguridad al colocar en el centro.")]
     public float startClampMargin = 0.5f;
 
-    [Header("Robustez de warp")]
+    [Header("Robustez / espera")]
     [Tooltip("Espera máxima para que la Start Room tenga bounds válidos.")]
-    public float maxWaitSeconds = 6f;
-    [Tooltip("Frames consecutivos en los que los bounds deben verse estables antes de warpear.")]
+    public float maxWaitSeconds = 8f;
+    [Tooltip("Frames consecutivos con bounds estables antes de warpear.")]
     public int stableFramesRequired = 2;
 
-    // Evitar dobles warps por piso
+    [Header("Pantalla de carga")]
+    public LoadingScreenController loadingScreen;
+    public Sprite[] loadingArtCandidates;
+    [Tooltip("Tiempo mínimo visible de la pantalla de carga.")]
+    public float minLoadingSeconds = 1.0f;
+
+    // Estado interno
     bool warpDoneThisFloor = false;
+    bool manualLoading = false; // usado para ignorar warps por eventos mientras usamos loading
 
     void Awake()
     {
@@ -37,8 +44,6 @@ public class FloorFlowController : MonoBehaviour
 
         SceneManager.sceneLoaded += OnSceneLoaded;
         ProcDungeonGenerator.OnGenerated += OnDungeonGenerated;
-
-        // Señal temprana desde la StartRoom
         RoomRuntime.OnStartRoomMarked += HandleStartRoomMarked;
     }
 
@@ -74,7 +79,6 @@ public class FloorFlowController : MonoBehaviour
         }
     }
 
-    /// <summary>Resetea la corrida (antes de una nueva partida).</summary>
     public void ResetRunState()
     {
         currentIndex = -1;
@@ -83,9 +87,9 @@ public class FloorFlowController : MonoBehaviour
 
         RoomRuntime.ResetStartPointerForNewFloor();
         warpDoneThisFloor = false;
+        manualLoading = false;
     }
 
-    /// <summary>Avanza al siguiente piso y lo genera.</summary>
     public void NextFloor()
     {
         if (!sequence || sequence.floors.Count == 0)
@@ -104,7 +108,6 @@ public class FloorFlowController : MonoBehaviour
         BuildCurrentFloor();
     }
 
-    /// <summary>Reconstruye el piso del índice actual sin modificar el índice.</summary>
     void BuildCurrentFloor()
     {
         DungeonMapRegistry.Instance?.ClearAll();
@@ -127,21 +130,151 @@ public class FloorFlowController : MonoBehaviour
         RoomRuntime.ResetStartPointerForNewFloor();
         warpDoneThisFloor = false;
 
-        // Genera (warp se hará por evento de StartRoom y/o fallback OnGenerated)
         generator.GenerateForFloor(cfg);
         Debug.Log($"[FloorFlow] Entrando a piso {cfg.floorId} – {cfg.displayName} (index={currentIndex})");
     }
 
-    // === Señales ===
+    // =========================
+    //   Integración con Elevador
+    // =========================
+    /// <summary>Llamar desde ElevatorExit cuando el jugador entra.</summary>
+    public void UI_EnterElevator_AndLoadNextFloor()
+    {
+        if (!isActiveAndEnabled) return;
+        StartCoroutine(EnterElevatorAndLoadNextFloor_Co());
+    }
 
+    IEnumerator EnterElevatorAndLoadNextFloor_Co()
+    {
+        if (!sequence || sequence.floors.Count == 0) yield break;
+
+        // Lock jugador
+        var player = GameObject.FindGameObjectWithTag("Player");
+        var locker = player ? player.GetComponent<PlayerControlLocker>() : null;
+        if (locker) locker.HardLock();
+
+        // Mostrar pantalla de carga
+        manualLoading = true;
+        float shownAt = Time.unscaledTime;
+        if (loadingScreen)
+        {
+            var art = PickRandomArt();
+            loadingScreen.Show(art);
+        }
+
+        // Avanzar índice y generar
+        currentIndex++;
+        if (currentIndex >= sequence.floors.Count)
+        {
+            WinGame();
+            yield break;
+        }
+
+        // Generación "manual" (no confiar en warp por eventos mientras manualLoading)
+        DungeonMapRegistry.Instance?.ClearAll();
+        CleanupSceneLeftovers();
+
+        if (!generator) generator = FindObjectOfType<ProcDungeonGenerator>();
+        if (!generator)
+        {
+            Debug.LogError("[FloorFlow] No encuentro ProcDungeonGenerator en la escena.");
+            yield break;
+        }
+
+        var cfg = Current;
+        if (cfg == null)
+        {
+            Debug.LogError($"[FloorFlow] Índice {currentIndex} sin FloorDefinition.");
+            yield break;
+        }
+
+        RoomRuntime.ResetStartPointerForNewFloor();
+        warpDoneThisFloor = false;
+
+        bool floorGenerated = false;
+        System.Action genCb = () => floorGenerated = true;
+        ProcDungeonGenerator.OnGenerated += genCb;
+
+        generator.GenerateForFloor(cfg);
+
+        // Esperar a que se haya generado y exista StartRoom
+        float t = 0f;
+        while (t < maxWaitSeconds && (!floorGenerated || RoomRuntime.LastStartRoom == null))
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Asegurar bounds estables
+        if (RoomRuntime.LastStartRoom != null)
+        {
+            var rb = RoomRuntime.LastStartRoom.GetComponent<RoomBuilder>();
+            yield return EnsureBoundsReady_Co(rb, maxWaitSeconds, stableFramesRequired);
+
+            // Holguras para física/tilemaps
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForFixedUpdate();
+            yield return null;
+
+            // Warp al CENTRO exacto de la StartRoom
+            Vector3 spawn = rb ? ClampInside(rb.RoomBounds, rb.RoomBounds.center, startClampMargin) : Vector3.zero;
+
+            if (player)
+            {
+                var prb = player.GetComponent<Rigidbody2D>();
+                if (prb)
+                {
+#if UNITY_6000_0_OR_NEWER || UNITY_2022_2_OR_NEWER
+                    prb.linearVelocity = Vector2.zero;
+#else
+                    prb.velocity = Vector2.zero;
+#endif
+                    prb.position = (Vector2)spawn;
+                }
+                else player.transform.position = spawn;
+            }
+
+            if (rb && CameraRoomLock.Instance)
+                CameraRoomLock.Instance.SnapToRoom(rb.RoomBounds);
+        }
+
+        ProcDungeonGenerator.OnGenerated -= genCb;
+
+        // Mantener pantalla el mínimo tiempo
+        float minHold = Mathf.Max(0f, minLoadingSeconds - (Time.unscaledTime - shownAt));
+        if (minHold > 0f) yield return new WaitForSecondsRealtime(minHold);
+
+        if (loadingScreen) loadingScreen.Hide();
+
+        if (locker) locker.HardUnlock();
+
+        warpDoneThisFloor = true;
+        manualLoading = false;
+    }
+
+    Sprite PickRandomArt()
+    {
+        if (loadingArtCandidates != null && loadingArtCandidates.Length > 0)
+        {
+            int i = Random.Range(0, loadingArtCandidates.Length);
+            return loadingArtCandidates[i];
+        }
+        return null;
+    }
+
+    // =========================
+    //   Señales normales (fallback)
+    // =========================
     void HandleStartRoomMarked(RoomRuntime startRoom)
     {
+        if (manualLoading) return;           // estamos en flujo manual
         if (warpDoneThisFloor || startRoom == null) return;
         StartCoroutine(WarpToStartCenter_Co(startRoom));
     }
 
     void OnDungeonGenerated()
     {
+        if (manualLoading) return;           // estamos en flujo manual
         if (warpDoneThisFloor) return;
         StartCoroutine(FallbackWarpAfterGenerated_Co());
     }
@@ -161,7 +294,6 @@ public class FloorFlowController : MonoBehaviour
             yield return WarpToStartCenter_Co(startRoom);
     }
 
-    // === Warp robusto al CENTRO de la Start Room ===
     IEnumerator WarpToStartCenter_Co(RoomRuntime startRoom)
     {
         if (warpDoneThisFloor) yield break;
@@ -169,20 +301,17 @@ public class FloorFlowController : MonoBehaviour
         var builder = startRoom ? startRoom.GetComponent<RoomBuilder>() : null;
         yield return EnsureBoundsReady_Co(builder, maxWaitSeconds, stableFramesRequired);
 
-        // Holguras extra para física/render/tilemaps
         yield return new WaitForEndOfFrame();
         yield return new WaitForFixedUpdate();
         yield return null;
 
-        // Player
         var playerGO = GameObject.FindGameObjectWithTag("Player");
         if (!playerGO) yield break;
 
         var locker = playerGO.GetComponent<PlayerControlLocker>();
         if (locker) locker.HardLock();
 
-        Vector3 spawn = (builder != null) ? builder.RoomBounds.center : playerGO.transform.position;
-        if (builder != null) spawn = ClampInside(builder.RoomBounds, spawn, startClampMargin);
+        Vector3 spawn = (builder != null) ? ClampInside(builder.RoomBounds, builder.RoomBounds.center, startClampMargin) : playerGO.transform.position;
 
         var rb = playerGO.GetComponent<Rigidbody2D>();
         if (rb)
@@ -199,7 +328,6 @@ public class FloorFlowController : MonoBehaviour
             playerGO.transform.position = spawn;
         }
 
-        // Cam a la Start Room
         if (builder && CameraRoomLock.Instance)
             CameraRoomLock.Instance.SnapToRoom(builder.RoomBounds);
 
@@ -211,7 +339,6 @@ public class FloorFlowController : MonoBehaviour
     IEnumerator EnsureBoundsReady_Co(RoomBuilder builder, float maxWait, int stableFrames)
     {
         float t = 0f;
-        // Espera a que exista builder
         while (builder == null && t < maxWait)
         {
             builder = FindObjectOfType<RoomBuilder>();
@@ -220,7 +347,6 @@ public class FloorFlowController : MonoBehaviour
         }
         if (builder == null) yield break;
 
-        // Espera a que los bounds tengan área
         t = 0f;
         while (t < maxWait && (builder.RoomBounds.size.x * builder.RoomBounds.size.y) < 0.001f)
         {
@@ -228,22 +354,16 @@ public class FloorFlowController : MonoBehaviour
             yield return null;
         }
 
-        // Requiere estabilidad N frames
         int stable = 0;
-        Vector3 lastSize = builder.RoomBounds.size;
+        Vector3 last = builder.RoomBounds.size;
         while (stable < Mathf.Max(1, stableFrames) && t < maxWait)
         {
             yield return null;
             t += Time.unscaledDeltaTime;
 
-            var curSize = builder.RoomBounds.size;
-            if (Approximately(curSize, lastSize))
-                stable++;
-            else
-            {
-                stable = 0;
-                lastSize = curSize;
-            }
+            var cur = builder.RoomBounds.size;
+            if (Approximately(cur, last)) stable++;
+            else { stable = 0; last = cur; }
         }
     }
 
@@ -260,7 +380,6 @@ public class FloorFlowController : MonoBehaviour
         return new Vector3(x, y, p.z);
     }
 
-    // === Helpers ===
     RoomRuntime FindStartFromRegistry()
     {
         var reg = DungeonMapRegistry.Instance;
@@ -290,6 +409,5 @@ public class FloorFlowController : MonoBehaviour
     {
         Debug.Log("[FloorFlow] ¡Has vencido a la Reina! GAME CLEAR.");
         GameFlowController.Instance?.OnVictory();
-        // SaveManager.ClearSave(); // opcional
     }
 }
